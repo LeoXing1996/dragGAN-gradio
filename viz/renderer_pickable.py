@@ -6,6 +6,10 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
+"""This is a pickable version of Renderer
+"""
+from ipdb import iex
+
 from socket import has_dualstack_ipv6
 import sys
 import copy
@@ -91,15 +95,15 @@ class Renderer:
         self._networks      = dict()    # {cache_key: torch.nn.Module, ...}
         self._pinned_bufs   = dict()    # {(shape, dtype): torch.Tensor, ...}
         self._cmaps         = dict()    # {name: torch.Tensor, ...}
-        self._is_timing     = False
-        self._start_event   = torch.cuda.Event(enable_timing=True)
-        self._end_event     = torch.cuda.Event(enable_timing=True)
+        # self._is_timing     = False
+        # self._start_event   = torch.cuda.Event(enable_timing=True)
+        # self._end_event     = torch.cuda.Event(enable_timing=True)
         self._net_layers    = dict()    # {cache_key: [dnnlib.EasyDict, ...], ...}
         self._is_old        = False
 
     def render(self, **args):
         self._is_timing = True
-        self._start_event.record(torch.cuda.current_stream(self._device))
+        # self._start_event.record(torch.cuda.current_stream(self._device))
         res = dnnlib.EasyDict()
         try:
             init_net = False
@@ -122,7 +126,7 @@ class Renderer:
             self._render_drag_impl(res, **args)
         except:
             res.error = CapturedException()
-        self._end_event.record(torch.cuda.current_stream(self._device))
+        # self._end_event.record(torch.cuda.current_stream(self._device))
         if 'image' in res:
             res.image = self.to_cpu(res.image).detach().numpy()
         if 'image_pts' in res:
@@ -133,10 +137,10 @@ class Renderer:
             res.error = str(res.error)
         # if 'stop' in res and res.stop:
 
-        if self._is_timing:
-            self._end_event.synchronize()
-            res.render_time = self._start_event.elapsed_time(self._end_event) * 1e-3
-            self._is_timing = False
+        # if self._is_timing:
+        #     self._end_event.synchronize()
+        #     # res.render_time = self._start_event.elapsed_time(self._end_event) * 1e-3
+        #     self._is_timing = False
         return res
 
     def get_network(self, pkl, key, **tweak_kwargs):
@@ -286,6 +290,7 @@ class Renderer:
         self.feat_refs = None
         self.points0_pt = None
 
+    @iex
     def _render_drag_impl(self, res,
         points          = [],
         targets         = [],
@@ -307,6 +312,7 @@ class Renderer:
         untransform     = False,
         is_drag         = False,
         reset           = False,
+        to_pil = True,
         **kwargs
     ):
         G = self.G
@@ -398,6 +404,10 @@ class Renderer:
             img = img / img.norm(float('inf'), dim=[1,2], keepdim=True).clip(1e-8, 1e8)
         img = img * (10 ** (img_scale_db / 20))
         img = (img * 127.5 + 128).clamp(0, 255).to(torch.uint8).permute(1, 2, 0)
+        if to_pil:
+            from PIL import Image
+            img = img.cpu().numpy()
+            img = Image.fromarray(img)
         res.image = img
 
 #----------------------------------------------------------------------------
