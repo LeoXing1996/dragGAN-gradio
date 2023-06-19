@@ -60,6 +60,7 @@ with gr.Blocks() as app:
             "magnitude_direction_in_pixels": 1.0,
             "latent_space": "w",
             "trunc_psi": 0.7,
+            "trunc_cutoff": None,
             "lr": 1e-3,
         },
         "device": device,
@@ -143,38 +144,38 @@ with gr.Blocks() as app:
                 #     with gr.Tab("Generator Parameters"):
                 #         generator.get_gradio_panel(global_state)
 
-    with gr.Accordion('Tools'):
-        with gr.Tab('Pair-Points') as points_tab:
-            form_points_dropdown = gr.Dropdown(
-                choices=[],
-                value="",
-                interactive=True,
-                label="List of pair-points",
-            )
-            form_type_point_radio = gr.Radio(
-                ["start (p)", "target (t)"],
-                value="start (p)",
-                label="Type",
-            )
+        with gr.Accordion('Tools'):
+            with gr.Tab('Pair-Points') as points_tab:
+                form_points_dropdown = gr.Dropdown(
+                    choices=[],
+                    value="",
+                    interactive=True,
+                    label="List of pair-points",
+                )
+                form_type_point_radio = gr.Radio(
+                    ["start (p)", "target (t)"],
+                    value="start (p)",
+                    label="Type",
+                )
 
-            with gr.Row():
-                form_add_point_btn = gr.Button("Add pair-point").style(
-                    full_width=True)
-                form_remove_point_btn = gr.Button("Remove pair-point").style(
-                    full_width=True)
+                with gr.Row():
+                    form_add_point_btn = gr.Button("Add pair-point").style(
+                        full_width=True)
+                    form_remove_point_btn = gr.Button("Remove pair-point").style(
+                        full_width=True)
 
-        with gr.Tab("Mask (subtractive mask)") as mask_tab:
-            gr.Markdown("""
-                White zone = editable by DragGAN
-                Transparent zone = not editable by DragGAN.
-            """)
-            form_reset_mask_btn = gr.Button("Reset mask").style(
-                full_width=True)
-            form_radius_mask_number = gr.Number(
-                value=global_state.value["radius_mask"],
-                interactive=True,
-                label="Radius (pixels)",
-            ).style(full_width=False)
+            with gr.Tab("Mask (subtractive mask)") as mask_tab:
+                gr.Markdown("""
+                    White zone = editable by DragGAN
+                    Transparent zone = not editable by DragGAN.
+                """)
+                form_reset_mask_btn = gr.Button("Reset mask").style(
+                    full_width=True)
+                form_radius_mask_number = gr.Number(
+                    value=global_state.value["radius_mask"],
+                    interactive=True,
+                    label="Radius (pixels)",
+                ).style(full_width=False)
 
         with gr.Row():
             with gr.Tab("Run"):
@@ -275,6 +276,18 @@ with gr.Blocks() as app:
         def on_change_seed(seed, global_state):
             renderer = global_state["renderer"]
             global_state["params"]["seed"] = int(seed)
+            renderer.init_network(
+                global_state['generator_params'],  # res
+                renderer.pkl,  # pkl
+                # pretrained_value,  # pkl
+                global_state['params']['seed'],  # w0_seed,
+                global_state['params']['latent_space'],  # w_plus
+                'const',
+                global_state['params']['trunc_psi'],  # trunc_psi,
+                global_state['params']['trunc_cutoff'],  # trunc_cutoff,
+                None,
+                global_state['params']['lr']  # lr,
+            )
             renderer._render_drag_impl(global_state['generator_params'],
                                        is_drag=False)
             image_raw = global_state['generator_params'].image
@@ -283,8 +296,6 @@ with gr.Blocks() as app:
 
             # # Restart draw
             # global_state["temporal_params"] = {"trainable_latent": trainable_latent}
-            import ipdb
-            ipdb.set_trace()
 
             return global_state, image_raw, global_state["draws"][
                 "image_with_mask"]
@@ -407,8 +418,7 @@ with gr.Blocks() as app:
 
             # Prepare the points for the inference
             if len(global_state["points"]) == 0:
-                import ipdb
-                ipdb.set_trace()
+
                 image_draw = draw_points_on_image(
                     global_state["draws"]["image_with_points"],
                     global_state["points"],
@@ -449,7 +459,7 @@ with gr.Blocks() as app:
                     p_in_pixels,  # point
                     t_in_pixels,  # target
                     mask_in_pixels,  #  mask,
-                    global_state['params']['lambda_mask'],  # lambda_mask
+                    global_state['params']['motion_lambda'],  # lambda_mask
                     reg=0,
                     feature_idx=5,  # NOTE: do not support change for now
                     r1=global_state['params']['r1_in_pixels'],  # r1
@@ -488,7 +498,7 @@ with gr.Blocks() as app:
                 # increate step
                 step_idx += 1
 
-            image_result = global_state['image']
+            image_result = global_state['generator_params']['image']
             # create_images(global_state['image'], global_state)
             create_images(global_state['generator_params']['image'],
                           global_state)
