@@ -29,13 +29,15 @@ def clear_state(global_state, target=None):
     """
     if target is None:
         target = ['point', 'mask']
+    if not isinstance(target, list):
+        target = [target]
     if 'point' in target:
         global_state['points'] = dict()
         print('Clear Points State!')
     if 'mask' in target:
         image_raw = global_state["images"]["image_raw"]
         global_state['images']['image_mask'] = np.ones(
-        (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
+            (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
         print('Clear mask State!')
     
     return global_state
@@ -170,7 +172,7 @@ with gr.Blocks() as app:
             enable_add_points = gr.Button('Draw Points')
             # TODO: support mask
             # form_enable_add_mask = gr.Button('Draw Mask')
-            undo_points = gr.Button('Undo')
+            undo_points = gr.Button('Reset Points')
             enable_add_mask = gr.Button('Draw Mask')
 
             # TODO: add a list to show all control points
@@ -757,6 +759,15 @@ with gr.Blocks() as app:
             global_state["draws"]["image_with_points"] = image_draw
 
             return global_state, image_draw
+       
+        def on_click_clear_points(global_state):
+            """Function to handle clear all control points
+            1. clear global_state['points'] (clear_state)
+            2. re-draw image
+            """
+            clear_state(global_state, target='point')
+            create_images(global_state['images']['image_raw'], global_state)
+            return global_state, global_state['draws']['image_with_points']
 
         undo_points.click(on_click_undo,
                           inputs=[global_state],
