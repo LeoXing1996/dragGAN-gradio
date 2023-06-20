@@ -15,10 +15,17 @@ from gradio_utils import (draw_mask_on_image, draw_points_on_image,
 from viz.renderer_pickable import Renderer
 
 device = 'cuda'
-# init_pkl = './checkpoints/stylegan2-cat-config-f.pkl'
-init_pkl = './checkpoints/stylegan_human_v2_512.pkl'
+init_pkl = './checkpoints/stylegan2-cat-config-f.pkl'
+# init_pkl = './checkpoints/stylegan_human_v2_512.pkl'
 
 init_key = ''
+
+
+def reverse_point_pairs(points):
+    new_points = []
+    for p in points:
+        new_points.append([p[1], p[0]])
+    return new_points
 
 
 def clear_state(global_state, target=None):
@@ -470,6 +477,7 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
                     gr.Button.update(interactive=False),  # NOTE: disable stop button
                 )
 
@@ -495,6 +503,10 @@ with gr.Blocks() as app:
             renderer: Renderer = global_state["renderer"]
             global_state['temporal_params']['stop'] = False
             global_state['editing_state'] = 'running'
+
+            # reverse points order
+            p_to_opt = reverse_point_pairs(p_in_pixels) 
+            t_to_opt = reverse_point_pairs(t_in_pixels) 
             step_idx = 0
             while True:
                 if global_state["temporal_params"]["stop"]:
@@ -503,8 +515,8 @@ with gr.Blocks() as app:
                 # do drage here!
                 renderer._render_drag_impl(
                     global_state['generator_params'],
-                    p_in_pixels,  # point
-                    t_in_pixels,  # target
+                    p_to_opt,  # point
+                    t_to_opt,  # target
                     mask_in_pixels,  # mask,
                     global_state['params']['motion_lambda'],  # lambda_mask
                     reg=0,
@@ -524,12 +536,14 @@ with gr.Blocks() as app:
                     is_drag=True)
 
                 if step_idx % global_state['draw_interval'] == 0:
-                    for key_point, p_i, t_i in zip(valid_points, p_in_pixels,
-                                                   t_in_pixels):
+                    for key_point, p_i, t_i in zip(valid_points, p_to_opt,
+                                                   t_to_opt):
                         # global_state["points"][key_point]["start_temp"] = p_i.tolist()
                         # global_state["points"][key_point]["target"] = t_i.tolist()
-                        global_state["points"][key_point]["start_temp"] = p_i
-                        global_state["points"][key_point]["target"] = t_i
+                        # global_state["points"][key_point]["start_temp"] = p_i
+                        # global_state["points"][key_point]["target"] = t_i
+                        global_state["points"][key_point]["start_temp"] = [p_i[1], p_i[0]]
+                        global_state["points"][key_point]["target"] = [t_i[1], t_i[0]]
 
                     create_images(global_state['generator_params']['image'],
                                   global_state)
@@ -540,6 +554,7 @@ with gr.Blocks() as app:
                     global_state["draws"]["image_with_points"],
                     global_state["draws"]["image_with_mask"],
                     gr.File.update(visible=False),
+                    gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
@@ -563,10 +578,11 @@ with gr.Blocks() as app:
 
             yield (
                 global_state,
-                step_idx,
+                0,  # reset step to 0 after stop.
                 global_state["draws"]["image_with_points"],
                 global_state["draws"]["image_with_mask"],
                 gr.File.update(visible=True, value=fp.name),
+                gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
@@ -590,9 +606,10 @@ with gr.Blocks() as app:
                 undo_points, 
                 form_reset_mask_btn, 
                 update_lr_number, 
+                form_latent_space,
                 form_start_btn,
                 form_stop_btn,
-                # <<< buttons
+                # <<< buttonm
             ],
         )
 
@@ -769,7 +786,7 @@ with gr.Blocks() as app:
             create_images(global_state['images']['image_raw'], global_state)
             return global_state, global_state['draws']['image_with_points']
 
-        undo_points.click(on_click_undo,
+        undo_points.click(on_click_clear_points,
                           inputs=[global_state],
                           outputs=[global_state, form_image_draw])
 
