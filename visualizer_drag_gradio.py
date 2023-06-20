@@ -179,7 +179,7 @@ with gr.Blocks() as app:
                     #             interactive=True,
                     #             label="LR")
                     form_seed_number = gr.Number(
-                        value=42,
+                        value=global_state.value['params']['seed'],
                         interactive=True,
                         label="Seed",
                     )
