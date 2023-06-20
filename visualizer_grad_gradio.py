@@ -289,24 +289,36 @@ with gr.Blocks() as app:
         )
 
         def on_click_reset_image(global_state):
-            global_state["images"]["image_raw"] = global_state["images"][
-                "image_orig"].copy()
-            global_state["draws"]["image_with_points"] = global_state[
-                "images"]["image_orig"].copy()
-            global_state['points'] = dict()
-            print('Clear points')
-
-            global_state['images']['image_with_mask'] = np.ones(
-                (
-                    global_state["images"]["image_raw"].size[1],
-                    global_state["images"]["image_raw"].size[0],
-                ),
-                dtype=np.uint8,
+            """Reset image to the original one and clear all states
+            NOTE: this button will be disabled with optimization is running.
+            1. generate image with the original random seed and clear optimizer & w states (renderer.init_network)
+            2. clear mask and point state (clear_state)
+            3. re-draw image (create_image)
+            """
+            renderer = global_state["renderer"]
+            seed = int(global_state["params"]["seed"])
+            renderer.init_network(
+                global_state['generator_params'],  # res
+                renderer.pkl,  # pkl
+                # pretrained_value,  # pkl
+                seed,  # w0_seed,
+                global_state['params']['latent_space'] == 'w+',  # w_plus
+                'const',
+                global_state['params']['trunc_psi'],  # trunc_psi,
+                global_state['params']['trunc_cutoff'],  # trunc_cutoff,
+                None,
+                global_state['params']['lr']  # lr,
             )
-            print('Clear mask')
+            renderer._render_drag_impl(global_state['generator_params'],
+                                       is_drag=False)
+            image_raw = global_state['generator_params'].image
 
-            return global_state, global_state["images"][
-                "image_raw"], global_state["draws"]["image_with_mask"]
+            clear_state(global_state)
+
+            create_images(image_raw, global_state, update_original=True)
+
+            return global_state, image_raw, global_state["draws"][
+                "image_with_mask"]
 
         form_reset_image.click(
             on_click_reset_image,
@@ -437,14 +449,27 @@ with gr.Blocks() as app:
 
             # Prepare the points for the inference
             if len(global_state["points"]) == 0:
-
-                image_draw = draw_points_on_image(
-                    global_state["draws"]["image_with_points"],
-                    global_state["points"],
-                    global_state["curr_point"],
+                # image_draw = draw_points_on_image(
+                #     global_state["draws"]["image_with_points"],
+                #     global_state["points"],
+                #     global_state["curr_point"],
+                # )
+                image_draw = global_state['draws']['image_with_points']
+                return (
+                    global_state,
+                    0,
+                    image_draw,
+                    image_draw,
+                    gr.File.update(visible=False),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=False),  # NOTE: disable stop button
                 )
-                return global_state, 0, image_draw, image_draw, gr.File.update(
-                    visible=False)
 
             # Transform the points into torch tensors
             for key_point, point in global_state["points"].items():
@@ -467,6 +492,7 @@ with gr.Blocks() as app:
 
             renderer: Renderer = global_state["renderer"]
             global_state['temporal_params']['stop'] = False
+            global_state['editing_state'] = 'running'
             step_idx = 0
             while True:
                 if global_state["temporal_params"]["stop"]:
@@ -477,7 +503,7 @@ with gr.Blocks() as app:
                     global_state['generator_params'],
                     p_in_pixels,  # point
                     t_in_pixels,  # target
-                    mask_in_pixels,  #  mask,
+                    mask_in_pixels,  # mask,
                     global_state['params']['motion_lambda'],  # lambda_mask
                     reg=0,
                     feature_idx=5,  # NOTE: do not support change for now
@@ -512,6 +538,14 @@ with gr.Blocks() as app:
                     global_state["draws"]["image_with_points"],
                     global_state["draws"]["image_with_mask"],
                     gr.File.update(visible=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=True),  # enable stop button in loop
                 )
 
                 # increate step
@@ -531,6 +565,14 @@ with gr.Blocks() as app:
                 global_state["draws"]["image_with_points"],
                 global_state["draws"]["image_with_mask"],
                 gr.File.update(visible=True, value=fp.name),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=False),  # NOTE: disable stop button with loop finish
             )
 
         form_start_btn.click(
@@ -538,18 +580,32 @@ with gr.Blocks() as app:
             inputs=[global_state],
             outputs=[
                 global_state, form_steps_number, form_image_draw,
-                form_image_mask_draw, form_download_result_file
+                form_image_mask_draw, form_download_result_file,
+                # >>> buttons
+                form_reset_image, 
+                enable_add_points, 
+                enable_add_mask,
+                undo_points, 
+                form_reset_mask_btn, 
+                update_lr_number, 
+                form_start_btn,
+                form_stop_btn,
+                # <<< buttons
             ],
         )
 
         def on_click_stop(global_state):
+            """Function to handle stop button is clicked.
+            1. send a stop signal by set global_state["temporal_params"]["stop"] as True
+            2. Disable Stop button
+            """
             global_state["temporal_params"]["stop"] = True
 
-            return global_state
+            return global_state, gr.Button.update(interactive=False)
 
         form_stop_btn.click(on_click_stop,
                             inputs=[global_state],
-                            outputs=[global_state])
+                            outputs=[global_state, form_stop_btn])
 
         form_draw_interval_number.change(
             partial(
