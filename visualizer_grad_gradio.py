@@ -101,7 +101,8 @@ with gr.Blocks() as app:
         },
         "generator_params": dnnlib.EasyDict(),
         "params": {
-            "seed": 4211,  # cute cat ^_^
+            # "seed": 4211,  # cute cat ^_^
+            "seed": 0,
             "motion_lambda": 20,
             "r1_in_pixels": 3,
             "r2_in_pixels": 12,
@@ -109,7 +110,7 @@ with gr.Blocks() as app:
             "latent_space": "w",
             "trunc_psi": 0.7,
             "trunc_cutoff": None,
-            "lr": 1e-3,
+            "lr": 0.001,
         },
         "device": device,
         "draw_interval": 1,
@@ -164,18 +165,27 @@ with gr.Blocks() as app:
                     gr.Markdown(value='Latent', show_label=False)
 
                 with gr.Column(scale=4, min_width=10):
-                    with gr.Row():
-                        with gr.Column(scale=1, min_width=10):
-                            form_seed_number = gr.Number(
-                                        value=42,
-                                        interactive=True,
-                                        label="Seed",
-                                    )
-                        with gr.Column(scale=2, min_width=10):
-                            form_lr_number = gr.Number(
-                                value=global_state.value["params"]["lr"],
-                                interactive=True,
-                                label="LR")
+                    # with gr.Row():
+                    #     with gr.Column(scale=1, min_width=10):
+                    #         form_seed_number = gr.Number(
+                    #                     value=42,
+                    #                     interactive=True,
+                    #                     label="Seed",
+                    #                 )
+                    #     with gr.Column(scale=2, min_width=10):
+                    #         form_lr_number = gr.Number(
+                    #             value=global_state.value["params"]["lr"],
+                    #             interactive=True,
+                    #             label="LR")
+                    form_seed_number = gr.Number(
+                        value=42,
+                        interactive=True,
+                        label="Seed",
+                    )
+                    form_lr_number = gr.Number(
+                        value=global_state.value["params"]["lr"],
+                        interactive=True,
+                        label="Step Size")
 
                     with gr.Row():
                         with gr.Column(scale=2, min_width=10):
@@ -196,9 +206,9 @@ with gr.Blocks() as app:
                 with gr.Column(scale=4, min_width=10):
                     with gr.Row():
                         with gr.Column(scale=1, min_width=10):
-                            enable_add_points = gr.Button('Add')
+                            enable_add_points = gr.Button('Add Points')
                         with gr.Column(scale=1, min_width=10):
-                            undo_points = gr.Button('Reset')
+                            undo_points = gr.Button('Reset Points')
                     with gr.Row():
                         with gr.Column(scale=1, min_width=10):
                             form_start_btn = gr.Button("Start")
@@ -224,28 +234,41 @@ with gr.Blocks() as app:
                         with gr.Column(scale=1, min_width=10):
                             form_reset_mask_btn = gr.Button("Reset mask")
                         with gr.Column(scale=1, min_width=10):
-                            show_mask = gr.Checkbox(label='Show Mask', show_label=False) 
+                            show_mask = gr.Checkbox(
+                                label='Show Mask', show_label=False)
 
                     with gr.Row():
-                        with gr.Column(scale=4, min_width=10):
-                            form_radius_mask_number = gr.Number(
+
+                        form_radius_mask_number = gr.Number(
                                 value=global_state.value["radius_mask"],
                                 interactive=True,
                                 label="Radius (pixels)")
-                        with gr.Column(scale=1, min_width=10):
-                            gr.Markdown(value='')
-                            gr.Markdown('Radius')
+                        # with gr.Column(scale=4, min_width=10):
+                        #     form_radius_mask_number = gr.Number(
+                        #         value=global_state.value["radius_mask"],
+                        #         interactive=True,
+                        #         label="Radius (pixels)")
+                        # with gr.Column(scale=1, min_width=10):
+                        #     gr.Markdown(value='')
+                        #     gr.Markdown('Radius')
                     with gr.Row():
-                        with gr.Column(scale=4, min_width=10):
-                            form_lambda_number = gr.Number(
+                        form_lambda_number = gr.Number(
                                 value=global_state.value["params"][
                                     "motion_lambda"],
                                 interactive=True,
                                 label="Lambda",
                             )
-                        with gr.Column(scale=1, min_width=10):
-                            gr.Markdown(value='')
-                            gr.Markdown('Lambda')
+
+                        # with gr.Column(scale=4, min_width=10):
+                        #     form_lambda_number = gr.Number(
+                        #         value=global_state.value["params"][
+                        #             "motion_lambda"],
+                        #         interactive=True,
+                        #         label="Lambda",
+                        #     )
+                        # with gr.Column(scale=1, min_width=10):
+                        #     gr.Markdown(value='')
+                        #     gr.Markdown('Lambda')
 
             # save
             with gr.Column(visible=False):
@@ -413,7 +436,8 @@ with gr.Blocks() as app:
                 global_state['generator_params'],  # res
                 renderer.pkl,  # pkl
                 global_state['params']['seed'],  # w0_seed,
-                global_state['params']['latent_space'] == (latent_space == 'w+'),  # w_plus
+                global_state['params']['latent_space'] == (
+                    latent_space == 'w+'),  # w_plus
                 'const',
                 global_state['params']['trunc_psi'],  # trunc_psi,
                 global_state['params']['trunc_cutoff'],  # trunc_cutoff,
@@ -466,7 +490,7 @@ with gr.Blocks() as app:
                 renderer.update_lr(lr)
                 print('New optimizer: ')
                 print(renderer.w_optim)
-            return global_state 
+            return global_state
 
         # def on_click_udate_lr(lr, global_state):
 
@@ -485,7 +509,7 @@ with gr.Blocks() as app:
         # )
 
         form_lr_number.change(
-            on_change_lr, 
+            on_change_lr,
             inputs=[form_lr_number, global_state],
             outputs=[global_state],
         )
@@ -548,6 +572,16 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=True),
                     # NOTE: disable stop button
                     gr.Button.update(interactive=False),
+
+                    # update other comps
+                    gr.Dropdown.update(interactive=True),
+                    gr.Number.update(interactive=True),
+                    gr.Number.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Checkbox.update(interactive=True),
+                    gr.Number.update(interactive=True),
+                    gr.Number.update(interactive=True),
                 )
 
             # Transform the points into torch tensors
@@ -635,6 +669,17 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=False),
                     # enable stop button in loop
                     gr.Button.update(interactive=True),
+
+                    # update other comps
+                    gr.Dropdown.update(interactive=False),
+                    gr.Number.update(interactive=False),
+                    gr.Number.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Button.update(interactive=False),
+                    gr.Checkbox.update(interactive=False),
+                    gr.Number.update(interactive=False),
+                    gr.Number.update(interactive=False),
+
                 )
 
                 # increate step
@@ -664,6 +709,17 @@ with gr.Blocks() as app:
                 gr.Button.update(interactive=True),
                 # NOTE: disable stop button with loop finish
                 gr.Button.update(interactive=False),
+
+                # update other comps
+                gr.Dropdown.update(interactive=True),
+                gr.Number.update(interactive=True),
+                gr.Number.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Button.update(interactive=True),
+                gr.Checkbox.update(interactive=True),
+                gr.Number.update(interactive=True),
+                gr.Number.update(interactive=True),
+                
             )
 
         form_start_btn.click(
@@ -682,6 +738,15 @@ with gr.Blocks() as app:
                 form_start_btn,
                 form_stop_btn,
                 # <<< buttonm
+                # >>> inputs comps
+                form_pretrained_dropdown,
+                form_seed_number,
+                form_lr_number,
+                flex_area,
+                fixed_area,
+                show_mask,
+                form_radius_mask_number,
+                form_lambda_number,
             ],
         )
 
