@@ -1,4 +1,6 @@
 from ipdb import iex
+import os
+import os.path as osp
 from functools import partial
 from tempfile import NamedTemporaryFile
 
@@ -15,10 +17,12 @@ from gradio_utils import (draw_mask_on_image, draw_points_on_image,
 from viz.renderer_pickable import Renderer
 
 device = 'cuda'
-init_pkl = './checkpoints/stylegan2-cat-config-f.pkl'
-# init_pkl = './checkpoints/stylegan_human_v2_512.pkl'
+cache_dir = './checkpoints'
+valid_checkpoints_dict = {
+    f.split('/')[-1].split('.')[0]: osp.join(cache_dir, f) for f in os.listdir(cache_dir) if (f.endswith('pkl') and osp.exists(osp.join(cache_dir, f)))
+}
 
-init_key = ''
+init_pkl = 'stylegan_human_v2_512'
 
 
 def reverse_point_pairs(points):
@@ -46,7 +50,7 @@ def clear_state(global_state, target=None):
         global_state['images']['image_mask'] = np.ones(
             (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
         print('Clear mask State!')
-    
+
     return global_state
 
 
@@ -66,6 +70,13 @@ def create_images(image_raw, global_state, update_original=False):
     if 'image_mask' not in global_state['images']:
         global_state["images"]["image_mask"] = np.ones(
             (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
+    else:
+        # rebuild mask to avoid shape mismatch
+        mask = global_state["images"]["image_mask"]
+        if (mask.shape[0] != image_raw.size[1] 
+                or mask.shape[1] != image_raw.size[0]):
+            global_state["images"]["image_mask"] = np.ones(
+                (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
 
     global_state["draws"]["image_with_mask"] = draw_mask_on_image(
         global_state["images"]["image_raw"],
@@ -113,7 +124,7 @@ with gr.Blocks() as app:
     # init image
     global_state.value['renderer'].init_network(
         global_state.value['generator_params'],  # res
-        init_pkl,  # pkl
+        valid_checkpoints_dict[init_pkl],  # pkl
         global_state.value['params']['seed'],  # w0_seed,
         global_state.value['params']['latent_space'] == 'w+',  # w_plus
         'const',
@@ -136,22 +147,21 @@ with gr.Blocks() as app:
                 with gr.Row():
                     with gr.Tab("Pretrained models"):
                         form_pretrained_dropdown = gr.Dropdown(
-                            choices=list(global_state.value['renderer'].
-                                         PRETRAINED_MODELS.keys()),
+                            choices=valid_checkpoints_dict.keys(),
                             label="Pretrained model",
-                            value="afhqcat",
+                            value=init_pkl,
                         )
 
-                    with gr.Tab("Local file"):
-                        form_model_pickle_file = gr.File(label="Pickle file")
+                    # with gr.Tab("Local file"):
+                    #     form_model_pickle_file = gr.File(label="Pickle file")
 
-                    with gr.Tab("URL"):
-                        with gr.Row():
-                            form_model_url = gr.Textbox(
-                                placeholder="Url of the pickle file",
-                                label="URL",
-                            )
-                            form_model_url_btn = gr.Button("Submit")
+                    # with gr.Tab("URL"):
+                    #     with gr.Row():
+                    #         form_model_url = gr.Textbox(
+                    #             placeholder="Url of the pickle file",
+                    #             label="URL",
+                    #         )
+                    #         form_model_url_btn = gr.Button("Submit")
 
                 with gr.Row().style(equal_height=True):
                     with gr.Tab("Image seed"):
@@ -231,7 +241,7 @@ with gr.Blocks() as app:
                 ["magnitude_direction_in_pixels"],
                 interactive=True,
                 label=("Magnitude direction of d vector"
-                        " (pixels)"),
+                       " (pixels)"),
             ).style(full_width=True)
 
         # with gr.Row():
@@ -269,11 +279,18 @@ with gr.Blocks() as app:
         # Network & latents tab listeners
         def on_change_pretrained_dropdown(pretrained_value, global_state,
                                           seed):
+            """Function to handle model change.
+            1. download model if need (TODO:)
+            2. re-init network with renderer.init_network
+            3. clear all, including images, because the original mask may mismatch with the new checkpoint
+            3. re-draw image with random seed
+            """
+            pretrained_pkl_path = valid_checkpoints_dict[pretrained_value]
             renderer: Renderer = global_state["renderer"]
 
             renderer.init_network(
                 global_state['generator_params'],  # res
-                pretrained_value,  # pkl
+                pretrained_pkl_path,  # pkl
                 global_state['params']['seed'],  # w0_seed,
                 global_state['params']['latent_space'] == 'w+',  # w_plus
                 'const',
@@ -282,6 +299,7 @@ with gr.Blocks() as app:
                 None,
                 global_state['params']['lr']  # lr,
             )
+            clear_state(global_state)
 
             renderer._render_drag_impl(global_state['generator_params'],
                                        is_drag=False)
@@ -478,7 +496,8 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
-                    gr.Button.update(interactive=False),  # NOTE: disable stop button
+                    # NOTE: disable stop button
+                    gr.Button.update(interactive=False),
                 )
 
             # Transform the points into torch tensors
@@ -505,8 +524,8 @@ with gr.Blocks() as app:
             global_state['editing_state'] = 'running'
 
             # reverse points order
-            p_to_opt = reverse_point_pairs(p_in_pixels) 
-            t_to_opt = reverse_point_pairs(t_in_pixels) 
+            p_to_opt = reverse_point_pairs(p_in_pixels)
+            t_to_opt = reverse_point_pairs(t_in_pixels)
             step_idx = 0
             while True:
                 if global_state["temporal_params"]["stop"]:
@@ -542,8 +561,10 @@ with gr.Blocks() as app:
                         # global_state["points"][key_point]["target"] = t_i.tolist()
                         # global_state["points"][key_point]["start_temp"] = p_i
                         # global_state["points"][key_point]["target"] = t_i
-                        global_state["points"][key_point]["start_temp"] = [p_i[1], p_i[0]]
-                        global_state["points"][key_point]["target"] = [t_i[1], t_i[0]]
+                        global_state["points"][key_point]["start_temp"] = [
+                            p_i[1], p_i[0]]
+                        global_state["points"][key_point]["target"] = [
+                            t_i[1], t_i[0]]
 
                     create_images(global_state['generator_params']['image'],
                                   global_state)
@@ -562,7 +583,8 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=True),  # enable stop button in loop
+                    # enable stop button in loop
+                    gr.Button.update(interactive=True),
                 )
 
                 # increate step
@@ -590,7 +612,8 @@ with gr.Blocks() as app:
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
-                gr.Button.update(interactive=False),  # NOTE: disable stop button with loop finish
+                # NOTE: disable stop button with loop finish
+                gr.Button.update(interactive=False),
             )
 
         form_start_btn.click(
@@ -600,12 +623,12 @@ with gr.Blocks() as app:
                 global_state, form_steps_number, form_image_draw,
                 form_image_mask_draw, form_download_result_file,
                 # >>> buttons
-                form_reset_image, 
-                enable_add_points, 
+                form_reset_image,
+                enable_add_points,
                 enable_add_mask,
-                undo_points, 
-                form_reset_mask_btn, 
-                update_lr_number, 
+                undo_points,
+                form_reset_mask_btn,
+                update_lr_number,
                 form_latent_space,
                 form_start_btn,
                 form_stop_btn,
@@ -776,7 +799,7 @@ with gr.Blocks() as app:
             global_state["draws"]["image_with_points"] = image_draw
 
             return global_state, image_draw
-       
+
         def on_click_clear_points(global_state):
             """Function to handle clear all control points
             1. clear global_state['points'] (clear_state)
