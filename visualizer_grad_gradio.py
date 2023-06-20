@@ -3,6 +3,7 @@ import os
 import os.path as osp
 from functools import partial
 from tempfile import NamedTemporaryFile
+from argparse import ArgumentParser
 
 import cv2
 import gradio as gr
@@ -948,6 +949,11 @@ with gr.Blocks() as app:
             outputs=[global_state, form_image_mask_draw],
         )
 
+
+parser = ArgumentParser()
+parser.add_argument('--share', action='store_true')
+args = parser.parse_args()
+
 gr.close_all()
 app.queue(concurrency_count=5, max_size=20)
-app.launch()
+app.launch(share=args.share)
