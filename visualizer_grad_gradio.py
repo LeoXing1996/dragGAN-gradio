@@ -21,6 +21,26 @@ init_pkl = './checkpoints/stylegan_human_v2_512.pkl'
 init_key = ''
 
 
+def clear_state(global_state, target=None):
+    """Clear target history state from global_state
+    If target is not defined, points and mask will be both removed.
+    1. set global_state['points'] as empty dict
+    2. set global_state['mask'] as full-one mask.
+    """
+    if target is None:
+        target = ['point', 'mask']
+    if 'point' in target:
+        global_state['points'] = dict()
+        print('Clear Points State!')
+    if 'mask' in target:
+        image_raw = global_state["images"]["image_raw"]
+        global_state['images']['image_mask'] = np.ones(
+        (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
+        print('Clear mask State!')
+    
+    return global_state
+
+
 def create_images(image_raw, global_state, update_original=False):
     if isinstance(image_raw, torch.Tensor):
         image_raw = image_raw.cpu().numpy()
@@ -34,8 +54,10 @@ def create_images(image_raw, global_state, update_original=False):
     global_state["draws"]["image_with_points"] = draw_points_on_image(
         image_raw, global_state["points"], global_state["curr_point"])
 
-    global_state["images"]["image_mask"] = np.ones(
-        (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
+    if 'image_mask' not in global_state['images']:
+        global_state["images"]["image_mask"] = np.ones(
+            (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
+
     global_state["draws"]["image_with_mask"] = draw_mask_on_image(
         global_state["images"]["image_raw"],
         global_state["images"]["image_mask"])
@@ -130,8 +152,6 @@ with gr.Blocks() as app:
                                 interactive=True,
                                 label="Seed",
                             )
-                            form_update_image_seed_btn = gr.Button(
-                                "Update image")
 
                     with gr.Tab("Image projection"):
                         with gr.Row():
@@ -296,7 +316,11 @@ with gr.Blocks() as app:
 
         # Update parameters
         def on_change_update_image_seed(seed, global_state):
-
+            """Function to handle generation seed change.
+            1. generate image with new random seed and clear optimizer & w states (renderer.init_network)
+            2. clear mask and point state (clear_state)
+            3. re-draw image (create_images)
+            """
             renderer = global_state["renderer"]
             global_state["params"]["seed"] = int(seed)
             renderer.init_network(
@@ -315,12 +339,14 @@ with gr.Blocks() as app:
                                        is_drag=False)
             image_raw = global_state['generator_params'].image
 
+            clear_state(global_state)
+
             create_images(image_raw, global_state, update_original=True)
 
             return global_state, image_raw, global_state["draws"][
                 "image_with_mask"]
 
-        form_update_image_seed_btn.click(
+        form_seed_number.change(
             on_change_update_image_seed,
             inputs=[form_seed_number, global_state],
             outputs=[global_state, form_image_draw, form_image_mask_draw],
