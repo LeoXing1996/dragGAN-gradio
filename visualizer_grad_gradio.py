@@ -119,12 +119,15 @@ with gr.Blocks() as app:
         "curr_point": None,
         "curr_type_point": "start",
         'editing_state': 'add_points',
+        'pretrained_weight': init_pkl
     })
 
     # init image
+    # import ipdb
+    # ipdb.set_trace()
     global_state.value['renderer'].init_network(
         global_state.value['generator_params'],  # res
-        valid_checkpoints_dict[init_pkl],  # pkl
+        valid_checkpoints_dict[global_state.value['pretrained_weight']],  # pkl
         global_state.value['params']['seed'],  # w0_seed,
         global_state.value['params']['latent_space'] == 'w+',  # w_plus
         'const',
@@ -423,6 +426,7 @@ with gr.Blocks() as app:
             3. re-draw image with random seed
             """
             pretrained_pkl_path = valid_checkpoints_dict[pretrained_value]
+            global_state['pretrained_weight'] = pretrained_value
             renderer: Renderer = global_state["renderer"]
 
             renderer.init_network(
@@ -529,17 +533,47 @@ with gr.Blocks() as app:
         )
 
         def on_click_latent_space(latent_space, global_state):
-            # import ipdb
-            # ipdb.set_trace()
-            global_state['params']['latent_space'] = latent_space
-            renderer = global_state['renderer']
-            renderer.update_optim_space(latent_space == 'w+')
-            return global_state
+            """Function to reset latent space to optimize.
+            NOTE: this function we reset the image and all controls
+            0. re-generate image
+            1. clear all state
+            2. re-draw image
+            3. update latent space
+            """
+            clear_state(global_state)
+
+            renderer: Renderer = global_state["renderer"]
+            renderer.init_network(
+                global_state['generator_params'],  # res
+                renderer.pkl,  # pkl
+                global_state['params']['seed'],  # w0_seed,
+                global_state['params']['latent_space'] == (latent_space == 'w+'),  # w_plus
+                'const',
+                global_state['params']['trunc_psi'],  # trunc_psi,
+                global_state['params']['trunc_cutoff'],  # trunc_cutoff,
+                None,
+                global_state['params']['lr']  # lr,
+            )
+            renderer._render_drag_impl(global_state['generator_params'],
+                                       is_drag=False)
+
+            image_raw = global_state['generator_params'].image
+
+            clear_state(global_state)
+            create_images(image_raw, global_state, update_original=True)
+
+            return global_state, image_raw, global_state["draws"][
+                "image_with_mask"]
+
+            # global_state['params']['latent_space'] = latent_space
+            # renderer = global_state['renderer']
+            # renderer.update_optim_space(latent_space == 'w+')
+            # return global_state
 
         form_latent_space.change(
             on_click_latent_space,
             inputs=[form_latent_space, global_state],
-            outputs=[global_state]
+            outputs=[global_state, form_image_draw, form_image_mask_draw]
         )
 
         # Tools tab listeners
