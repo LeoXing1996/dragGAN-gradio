@@ -180,7 +180,6 @@ with gr.Blocks() as app:
                                 value=global_state.value["params"]["lr"],
                                 interactive=True,
                                 label="LR")
-                            update_lr_number = gr.Button('Update')
                         with gr.Column(scale=1, min_width=10):
                             gr.Markdown(value='')
                             gr.Markdown(value='Step Size')
@@ -269,6 +268,7 @@ with gr.Blocks() as app:
                 value=global_state.value["params"]["r2_in_pixels"],
                 interactive=True,
                 label="R2 (pixels)", visible=False).style(full_width=False)
+            # <<< some unused labels
 
             form_draw_interval_number = gr.Number(
                 value=global_state.value["draw_interval"],
@@ -565,11 +565,6 @@ with gr.Blocks() as app:
             return global_state, image_raw, global_state["draws"][
                 "image_with_mask"]
 
-            # global_state['params']['latent_space'] = latent_space
-            # renderer = global_state['renderer']
-            # renderer.update_optim_space(latent_space == 'w+')
-            # return global_state
-
         form_latent_space.change(
             on_click_latent_space,
             inputs=[form_latent_space, global_state],
@@ -682,7 +677,6 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
-                    gr.Button.update(interactive=True),
                     # latent space
                     gr.Radio.update(interactive=True),
                     gr.Button.update(interactive=True),
@@ -770,7 +764,6 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=False),
                     # latent space
                     gr.Radio.update(interactive=False),
                     gr.Button.update(interactive=False),
@@ -800,7 +793,6 @@ with gr.Blocks() as app:
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
-                gr.Button.update(interactive=True),
                 # latent space
                 gr.Radio.update(interactive=True),
                 gr.Button.update(interactive=True),
@@ -820,7 +812,6 @@ with gr.Blocks() as app:
                 enable_add_mask,
                 undo_points,
                 form_reset_mask_btn,
-                update_lr_number,
                 form_latent_space,
                 form_start_btn,
                 form_stop_btn,
