@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 # font = ImageFont.truetype(('./Roboto-Medium.ttf'), 32)
 
 
-def draw_points_on_image(image, points, curr_point=None, highlight_all=True):
+def draw_points_on_image(image, points, curr_point=None, highlight_all=True, radius_scale=0.01):
     overlay_rgba = Image.new("RGBA", image.size, 0)
     overlay_draw = ImageDraw.Draw(overlay_rgba)
     for point_key, point in points.items():
@@ -20,7 +20,7 @@ def draw_points_on_image(image, points, curr_point=None, highlight_all=True):
             p_color = (255, 0, 0, 35)
             t_color = (0, 0, 255, 35)
 
-        rad_draw = int(image.size[0] * 0.02)
+        rad_draw = int(image.size[0] * radius_scale)
 
         p_start = point.get("start_temp", point["start"])
         p_target = point["target"]

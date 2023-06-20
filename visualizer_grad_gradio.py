@@ -73,7 +73,7 @@ def create_images(image_raw, global_state, update_original=False):
     else:
         # rebuild mask to avoid shape mismatch
         mask = global_state["images"]["image_mask"]
-        if (mask.shape[0] != image_raw.size[1] 
+        if (mask.shape[0] != image_raw.size[1]
                 or mask.shape[1] != image_raw.size[0]):
             global_state["images"]["image_mask"] = np.ones(
                 (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
@@ -139,131 +139,140 @@ with gr.Blocks() as app:
                   global_state.value, update_original=True)
 
     with gr.Row():
-        # Left column
-        with gr.Column(scale=0.7):
 
-            with gr.Accordion("Network & latent"):
+        with gr.Column(scale=3):
+            # gr.HighlightedText([('Network & Latent')], show_label=False)
 
-                with gr.Row():
-                    with gr.Tab("Pretrained models"):
-                        form_pretrained_dropdown = gr.Dropdown(
-                            choices=valid_checkpoints_dict.keys(),
-                            label="Pretrained model",
-                            value=init_pkl,
-                        )
+            # network and latent
+            with gr.Row():
 
-                    # with gr.Tab("Local file"):
-                    #     form_model_pickle_file = gr.File(label="Pickle file")
+                with gr.Column(scale=1, min_width=10):
+                    gr.Markdown(value='Pickle', show_label=False)
 
-                    # with gr.Tab("URL"):
-                    #     with gr.Row():
-                    #         form_model_url = gr.Textbox(
-                    #             placeholder="Url of the pickle file",
-                    #             label="URL",
-                    #         )
-                    #         form_model_url_btn = gr.Button("Submit")
+                with gr.Column(scale=4, min_width=10):
+                    form_pretrained_dropdown = gr.Dropdown(
+                        choices=valid_checkpoints_dict.keys(),
+                        label="Pretrained model",
+                        value=init_pkl,
+                    )
 
-                with gr.Row().style(equal_height=True):
-                    with gr.Tab("Image seed"):
-                        with gr.Row():
+            with gr.Row():
+                with gr.Column(scale=1, min_width=10):
+                    gr.Markdown(value='Latent', show_label=False)
+
+                with gr.Column(scale=4, min_width=10):
+                    with gr.Row():
+                        with gr.Column(scale=3, min_width=10):
                             form_seed_number = gr.Number(
                                 value=42,
                                 interactive=True,
                                 label="Seed",
                             )
+                        with gr.Column(scale=1, min_width=10):
+                            gr.Markdown(value='')
+                            gr.Markdown(value='Seed')
+                    with gr.Row():
+                        with gr.Column(scale=3, min_width=10):
+                            form_lr_number = gr.Number(
+                                value=global_state.value["params"]["lr"],
+                                interactive=True,
+                                label="LR")
+                            update_lr_number = gr.Button('Update')
+                        with gr.Column(scale=1, min_width=10):
+                            gr.Markdown(value='')
+                            gr.Markdown(value='Step Size')
 
-                    with gr.Tab("Image projection"):
-                        with gr.Row():
-                            form_project_file = gr.File(
-                                label="Image project file")
-                            form_project_iterations_number = gr.Number(
-                                value=1_000,
-                                label="Image projection num steps",
+                    with gr.Row():
+                        with gr.Column(scale=2, min_width=10):
+                            form_reset_image = gr.Button("Reset image")
+                        with gr.Column(scale=3, min_width=10):
+                            form_latent_space = gr.Radio(
+                                ['w', 'w+'],
+                                value=global_state.value['params']['latent_space'],
+                                interactive=True,
+                                label='Latent space to optimize',
+                                show_label=False,
                             )
-                            form_update_image_project_btn = gr.Button(
-                                "Run projection")
 
-                    form_reset_image = gr.Button("Reset image")
-
-        with gr.Accordion('Tools'):
-            enable_add_points = gr.Button('Draw Points')
-            # TODO: support mask
-            # form_enable_add_mask = gr.Button('Draw Mask')
-            undo_points = gr.Button('Reset Points')
-            enable_add_mask = gr.Button('Draw Mask')
-
-            # TODO: add a list to show all control points
-
-            form_reset_mask_btn = gr.Button("Reset mask").style(
-                full_width=True)
-            form_radius_mask_number = gr.Number(
-                value=global_state.value["radius_mask"],
-                interactive=True,
-                label="Radius (pixels)",
-            ).style(full_width=False)
-
-        with gr.Row():
-            # with gr.Tab("Run"):
+            # drag
             with gr.Row():
-                with gr.Column():
-                    form_start_btn = gr.Button("Start").style(
-                        full_width=True)
-                    form_stop_btn = gr.Button("Stop").style(
-                        full_width=True)
-                form_steps_number = gr.Number(
-                    value=0, label="Steps",
-                    interactive=False).style(full_width=False)
-                form_draw_interval_number = gr.Number(
-                    value=global_state.value["draw_interval"],
-                    label="Draw Interval (steps)",
-                    interactive=True,
-                ).style(full_width=False)
+                with gr.Column(scale=1, min_width=10):
+                    gr.Markdown(value='Drag', show_label=False)
+                with gr.Column(scale=4, min_width=10):
+                    with gr.Row():
+                        with gr.Column(scale=1, min_width=10):
+                            enable_add_points = gr.Button('Add')
+                        with gr.Column(scale=1, min_width=10):
+                            undo_points = gr.Button('Reset')
+                    with gr.Row():
+                        with gr.Column(scale=1, min_width=10):
+                            form_start_btn = gr.Button("Start")
+                        with gr.Column(scale=1, min_width=10):
+                            form_stop_btn = gr.Button("Stop")
+
+                    form_steps_number = gr.Number(
+                        value=0, label="Steps",
+                        interactive=False)
+
+            with gr.Row():
+                with gr.Column(scale=1, min_width=10):
+                    gr.Markdown(value='Mask', show_label=False)
+                with gr.Column(scale=4, min_width=10):
+                    enable_add_mask = gr.Button('Edit')
+                    # TODO: do not support yet
+                    # with gr.Row():
+                    #     with gr.Column(scale=1, min_width=10):
+                    #         add_point = gr.Button('Flexible Area')
+                    #     with gr.Column(scale=1, min_width=10):
+                    #         reset_point = gr.Button('Fixed Area')
+                    with gr.Row():
+                        with gr.Column(scale=1, min_width=10):
+                            form_reset_mask_btn = gr.Button("Reset mask")
+                        with gr.Column(scale=1, min_width=10):
+                            show_mask = gr.Checkbox(label='Show Mask', show_label=False) 
+
+                    with gr.Row():
+                        with gr.Column(scale=4, min_width=10):
+                            form_radius_mask_number = gr.Number(
+                                value=global_state.value["radius_mask"],
+                                interactive=True,
+                                label="Radius (pixels)")
+                        with gr.Column(scale=1, min_width=10):
+                            gr.Markdown(value='')
+                            gr.Markdown('Radius')
+                    with gr.Row():
+                        with gr.Column(scale=4, min_width=10):
+                            form_lambda_number = gr.Number(
+                                value=global_state.value["params"]["motion_lambda"],
+                                interactive=True,
+                                label="Lambda",
+                            )
+                        with gr.Column(scale=1, min_width=10):
+                            gr.Markdown(value='')
+                            gr.Markdown('Lambda')
+
+            # save
+            with gr.Column():
                 form_download_result_file = gr.File(
                     label="Download result",
                     visible=False).style(full_width=True)
 
-            # with gr.Tab("Hyperparameters"):
-        with gr.Row():
-            form_lambda_number = gr.Number(
-                value=global_state.value["params"]["motion_lambda"],
-                interactive=True,
-                label="Lambda",
-            ).style(full_width=True)
-            with gr.Column():
-                form_lr_number = gr.Number(
-                    value=global_state.value["params"]["lr"],
-                    interactive=True,
-                    label="LR",
-                ).style(full_width=True)
-                update_lr_number = gr.Button('Update')
-            form_magnitude_direction_in_pixels_number = gr.Number(
-                value=global_state.value["params"]
-                ["magnitude_direction_in_pixels"],
-                interactive=True,
-                label=("Magnitude direction of d vector"
-                       " (pixels)"),
-            ).style(full_width=True)
-
-        # with gr.Row():
+            # >>> some unused labels
             form_r1_in_pixels_number = gr.Number(
                 value=global_state.value["params"]["r1_in_pixels"],
                 interactive=True,
-                label="R1 (pixels)",
-            ).style(full_width=False)
+                label="R1 (pixels)", visible=False).style(full_width=False)
             form_r2_in_pixels_number = gr.Number(
                 value=global_state.value["params"]["r2_in_pixels"],
                 interactive=True,
-                label="R2 (pixels)",
-            ).style(full_width=False)
+                label="R2 (pixels)", visible=False).style(full_width=False)
 
-            form_latent_space = gr.Radio(
-                ['w', 'w+'],
-                value=global_state.value['params']['latent_space'],
-                interactive=True,
-                label='Latent space to optimize',
-            )
+            form_draw_interval_number = gr.Number(
+                value=global_state.value["draw_interval"],
+                label="Draw Interval (steps)",
+                interactive=True)
 
-        with gr.Column():
+        with gr.Column(scale=8):
             form_image_draw = gr.Image(
                 global_state.value["draws"]["image_with_points"],
                 elem_classes="image_nonselectable")
@@ -275,6 +284,134 @@ with gr.Blocks() as app:
             gr.Markdown(
                 "Credits: Adrià Ciurana Lanau | info@dreamlearning.ai | OpenMMLab | ?"
             )
+
+
+    # with gr.Row():
+    #     # Left column
+    #     with gr.Column(scale=0.7):
+
+    #         with gr.Accordion("Network & latent"):
+
+    #             with gr.Row():
+    #                 with gr.Tab("Pretrained models"):
+    #                     form_pretrained_dropdown = gr.Dropdown(
+    #                         choices=valid_checkpoints_dict.keys(),
+    #                         label="Pretrained model",
+    #                         value=init_pkl,
+    #                     )
+
+    #             with gr.Row().style(equal_height=True):
+    #                 with gr.Tab("Image seed"):
+    #                     with gr.Row():
+    #                         form_seed_number = gr.Number(
+    #                             value=42,
+    #                             interactive=True,
+    #                             label="Seed",
+    #                         )
+
+    #                 with gr.Tab("Image projection"):
+    #                     with gr.Row():
+    #                         form_project_file = gr.File(
+    #                             label="Image project file")
+    #                         form_project_iterations_number = gr.Number(
+    #                             value=1_000,
+    #                             label="Image projection num steps",
+    #                         )
+    #                         form_update_image_project_btn = gr.Button(
+    #                             "Run projection")
+
+    #                 form_reset_image = gr.Button("Reset image")
+
+    #     with gr.Accordion('Tools'):
+    #         enable_add_points = gr.Button('Draw Points')
+    #         # TODO: support mask
+    #         # form_enable_add_mask = gr.Button('Draw Mask')
+    #         undo_points = gr.Button('Reset Points')
+    #         enable_add_mask = gr.Button('Draw Mask')
+
+    #         # TODO: add a list to show all control points
+
+    #         form_reset_mask_btn = gr.Button("Reset mask").style(
+    #             full_width=True)
+    #         form_radius_mask_number = gr.Number(
+    #             value=global_state.value["radius_mask"],
+    #             interactive=True,
+    #             label="Radius (pixels)",
+    #         ).style(full_width=False)
+
+    #     with gr.Row():
+    #         # with gr.Tab("Run"):
+    #         with gr.Row():
+    #             with gr.Column():
+    #                 form_start_btn = gr.Button("Start").style(
+    #                     full_width=True)
+    #                 form_stop_btn = gr.Button("Stop").style(
+    #                     full_width=True)
+    #             form_steps_number = gr.Number(
+    #                 value=0, label="Steps",
+    #                 interactive=False).style(full_width=False)
+    #             form_draw_interval_number = gr.Number(
+    #                 value=global_state.value["draw_interval"],
+    #                 label="Draw Interval (steps)",
+    #                 interactive=True,
+    #             ).style(full_width=False)
+    #             form_download_result_file = gr.File(
+    #                 label="Download result",
+    #                 visible=False).style(full_width=True)
+
+    #         # with gr.Tab("Hyperparameters"):
+    #     with gr.Row():
+    #         form_lambda_number = gr.Number(
+    #             value=global_state.value["params"]["motion_lambda"],
+    #             interactive=True,
+    #             label="Lambda",
+    #         ).style(full_width=True)
+    #         with gr.Column():
+    #             form_lr_number = gr.Number(
+    #                 value=global_state.value["params"]["lr"],
+    #                 interactive=True,
+    #                 label="LR",
+    #             ).style(full_width=True)
+    #             update_lr_number = gr.Button('Update')
+    #         form_magnitude_direction_in_pixels_number = gr.Number(
+    #             value=global_state.value["params"]
+    #             ["magnitude_direction_in_pixels"],
+    #             interactive=True,
+    #             label=("Magnitude direction of d vector"
+    #                    " (pixels)"),
+    #         ).style(full_width=True)
+
+    #     # with gr.Row():
+    #         form_r1_in_pixels_number = gr.Number(
+    #             value=global_state.value["params"]["r1_in_pixels"],
+    #             interactive=True,
+    #             label="R1 (pixels)",
+    #         ).style(full_width=False)
+    #         form_r2_in_pixels_number = gr.Number(
+    #             value=global_state.value["params"]["r2_in_pixels"],
+    #             interactive=True,
+    #             label="R2 (pixels)",
+    #         ).style(full_width=False)
+
+    #         form_latent_space = gr.Radio(
+    #             ['w', 'w+'],
+    #             value=global_state.value['params']['latent_space'],
+    #             interactive=True,
+    #             label='Latent space to optimize',
+    #         )
+
+    #     with gr.Column():
+    #         form_image_draw = gr.Image(
+    #             global_state.value["draws"]["image_with_points"],
+    #             elem_classes="image_nonselectable")
+    #         form_image_mask_draw = gr.Image(
+    #             global_state.value["draws"]["image_with_mask"],
+    #             visible=False,
+    #             elem_classes="image_nonselectable",
+    #         )
+    #         gr.Markdown(
+    #             "Credits: Adrià Ciurana Lanau | info@dreamlearning.ai | OpenMMLab | ?"
+    #         )
 
         # Network & latents tab listeners
         def on_change_pretrained_dropdown(pretrained_value, global_state,
@@ -424,30 +561,48 @@ with gr.Blocks() as app:
             outputs=[global_state],
         )
 
-        def on_click_udate_lr(lr, global_state):
+        def on_change_lr(lr, global_state):
+            if lr == 0:
+                print('lr is 0, do nothing.')
+                return global_state
+            else:
+                global_state["params"]["lr"] = lr
+                renderer = global_state['renderer']
+                renderer.update_lr(lr)
+                print('New optimizer: ')
+                print(renderer.w_optim)
+            return global_state 
 
-            global_state["params"]["lr"] = lr
-            renderer = global_state['renderer']
-            renderer.update_lr(lr)
-            print('New optimizer: ')
-            print(renderer.w_optim)
+        # def on_click_udate_lr(lr, global_state):
 
-            return global_state
+        #     global_state["params"]["lr"] = lr
+        #     renderer = global_state['renderer']
+        #     renderer.update_lr(lr)
+        #     print('New optimizer: ')
+        #     print(renderer.w_optim)
 
-        update_lr_number.click(
-            on_click_udate_lr,
+        #     return global_state
+
+        # update_lr_number.click(
+        #     on_click_udate_lr,
+        #     inputs=[form_lr_number, global_state],
+        #     outputs=[global_state],
+        # )
+
+        form_lr_number.change(
+            on_change_lr, 
             inputs=[form_lr_number, global_state],
             outputs=[global_state],
         )
 
-        form_magnitude_direction_in_pixels_number.change(
-            partial(
-                on_change_single_global_state,
-                ["params", "magnitude_direction_in_pixels"],
-            ),
-            inputs=[form_magnitude_direction_in_pixels_number, global_state],
-            outputs=[global_state],
-        )
+        # form_magnitude_direction_in_pixels_number.change(
+        #     partial(
+        #         on_change_single_global_state,
+        #         ["params", "magnitude_direction_in_pixels"],
+        #     ),
+        #     inputs=[form_magnitude_direction_in_pixels_number, global_state],
+        #     outputs=[global_state],
+        # )
 
         form_r1_in_pixels_number.change(
             partial(
@@ -494,7 +649,8 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
-                    gr.Button.update(interactive=True),
+                    # latent space
+                    gr.Radio.update(interactive=True),
                     gr.Button.update(interactive=True),
                     # NOTE: disable stop button
                     gr.Button.update(interactive=False),
@@ -581,7 +737,8 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
                     gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=False),
+                    # latent space
+                    gr.Radio.update(interactive=False),
                     gr.Button.update(interactive=False),
                     # enable stop button in loop
                     gr.Button.update(interactive=True),
@@ -610,7 +767,8 @@ with gr.Blocks() as app:
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
                 gr.Button.update(interactive=True),
-                gr.Button.update(interactive=True),
+                # latent space
+                gr.Radio.update(interactive=True),
                 gr.Button.update(interactive=True),
                 # NOTE: disable stop button with loop finish
                 gr.Button.update(interactive=False),
