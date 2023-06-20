@@ -280,7 +280,6 @@ class Renderer:
         print(f'Rebuild optimizer with lr: {lr}')
         print('    Remain feat_refs and points0_pt')
 
-    @iex
     def _render_drag_impl(self, res,
         points          = [],
         targets         = [],
@@ -340,7 +339,7 @@ class Renderer:
                     py, px = round(point[0]), round(point[1])
                     self.feat_refs.append(self.feat0_resize[:,:,py,px])
                 self.points0_pt = torch.Tensor(points).unsqueeze(0).to(self._device) # 1, N, 2
-
+            
             # Point tracking with feature matching
             with torch.no_grad():
                 for j, point in enumerate(points):
@@ -357,6 +356,7 @@ class Renderer:
                     points[j] = point
 
             res.points = [[point[0], point[1]] for point in points]
+            # print(res.points)
 
             # Motion supervision
             loss_motion = 0
