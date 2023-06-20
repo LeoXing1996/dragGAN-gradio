@@ -112,7 +112,7 @@ with gr.Blocks() as app:
             "lr": 1e-3,
         },
         "device": device,
-        "draw_interval": 5,
+        "draw_interval": 1,
         "radius_mask": 51,
         "renderer": Renderer(),
         "points": {},
@@ -165,24 +165,17 @@ with gr.Blocks() as app:
 
                 with gr.Column(scale=4, min_width=10):
                     with gr.Row():
-                        with gr.Column(scale=3, min_width=10):
-                            form_seed_number = gr.Number(
-                                value=42,
-                                interactive=True,
-                                label="Seed",
-                            )
                         with gr.Column(scale=1, min_width=10):
-                            gr.Markdown(value='')
-                            gr.Markdown(value='Seed')
-                    with gr.Row():
-                        with gr.Column(scale=3, min_width=10):
+                            form_seed_number = gr.Number(
+                                        value=42,
+                                        interactive=True,
+                                        label="Seed",
+                                    )
+                        with gr.Column(scale=2, min_width=10):
                             form_lr_number = gr.Number(
                                 value=global_state.value["params"]["lr"],
                                 interactive=True,
                                 label="LR")
-                        with gr.Column(scale=1, min_width=10):
-                            gr.Markdown(value='')
-                            gr.Markdown(value='Step Size')
 
                     with gr.Row():
                         with gr.Column(scale=2, min_width=10):
@@ -222,11 +215,11 @@ with gr.Blocks() as app:
                 with gr.Column(scale=4, min_width=10):
                     enable_add_mask = gr.Button('Edit')
                     # TODO: do not support yet
-                    # with gr.Row():
-                    #     with gr.Column(scale=1, min_width=10):
-                    #         add_point = gr.Button('Flexible Area')
-                    #     with gr.Column(scale=1, min_width=10):
-                    #         reset_point = gr.Button('Fixed Area')
+                    with gr.Row():
+                        with gr.Column(scale=1, min_width=10):
+                            flex_area = gr.Button('Flexible Area')
+                        with gr.Column(scale=1, min_width=10):
+                            fixed_area = gr.Button('Fixed Area')
                     with gr.Row():
                         with gr.Column(scale=1, min_width=10):
                             form_reset_mask_btn = gr.Button("Reset mask")
@@ -245,7 +238,8 @@ with gr.Blocks() as app:
                     with gr.Row():
                         with gr.Column(scale=4, min_width=10):
                             form_lambda_number = gr.Number(
-                                value=global_state.value["params"]["motion_lambda"],
+                                value=global_state.value["params"][
+                                    "motion_lambda"],
                                 interactive=True,
                                 label="Lambda",
                             )
@@ -254,7 +248,7 @@ with gr.Blocks() as app:
                             gr.Markdown('Lambda')
 
             # save
-            with gr.Column():
+            with gr.Column(visible=False):
                 form_download_result_file = gr.File(
                     label="Download result",
                     visible=False).style(full_width=True)
@@ -273,7 +267,7 @@ with gr.Blocks() as app:
             form_draw_interval_number = gr.Number(
                 value=global_state.value["draw_interval"],
                 label="Draw Interval (steps)",
-                interactive=True)
+                interactive=True, visible=False)
 
         with gr.Column(scale=8):
             form_image_draw = gr.Image(
