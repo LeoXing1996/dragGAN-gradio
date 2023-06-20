@@ -51,44 +51,6 @@ class CaptureSuccess(Exception):
 
 class Renderer:
 
-    PRETRAINED_MODELS = {
-        "afhqwild": {
-            "url": "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/afhqwild.pkl",
-            # "features_extractor_layer": feature_extractor_default_callback,
-            "features_extractor_size": 256,
-        },
-        "afhqcat": {
-            "url": "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/afhqcat.pkl",
-            # "features_extractor_layer": feature_extractor_default_callback,
-            "features_extractor_size": 256,
-        },
-        "afhqdog": {
-            "url": "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/afhqdog.pkl",
-            # "features_extractor_layer": feature_extractor_default_callback,
-            "features_extractor_size": 256,
-        },
-        "brecahad": {
-            "url": "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/brecahad.pkl",
-            # "features_extractor_layer": feature_extractor_default_callback,
-            "features_extractor_size": 256,
-        },
-        "cifar10": {
-            "url": "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/cifar10.pkl",
-            # "features_extractor_layer": feature_extractor_default_callback,
-            "features_extractor_size": 16,
-        },
-        "ffhq": {
-            "url": "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/ffhq.pkl",
-            # "features_extractor_layer": feature_extractor_default_callback,
-            "features_extractor_size": 256,
-        },
-        "metfaces": {
-            "url": "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/metfaces.pkl",
-            # "features_extractor_layer": feature_extractor_default_callback,
-            "features_extractor_size": 256,
-        },
-    }
-
     def __init__(self):
         self._device        = torch.device('cuda')
         self._pkl_data      = dict()    # {pkl: dict | CapturedException, ...}
