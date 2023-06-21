@@ -51,7 +51,7 @@ class CaptureSuccess(Exception):
 
 class Renderer:
 
-    def __init__(self):
+    def __init__(self, disable_timing=False):
         self._device        = torch.device('cuda')
         self._pkl_data      = dict()    # {pkl: dict | CapturedException, ...}
         self._networks      = dict()    # {cache_key: torch.nn.Module, ...}
@@ -62,10 +62,14 @@ class Renderer:
         # self._end_event     = torch.cuda.Event(enable_timing=True)
         self._net_layers    = dict()    # {cache_key: [dnnlib.EasyDict, ...], ...}
         self._is_old        = False
+        self._disable_timing = disable_timing 
 
     def render(self, **args):
-        self._is_timing = True
-        # self._start_event.record(torch.cuda.current_stream(self._device))
+        if self._disable_timing:
+            self._is_timing = False
+        else:
+            self._start_event.record(torch.cuda.current_stream(self._device))
+            self._is_timing = True
         res = dnnlib.EasyDict()
         try:
             init_net = False
@@ -88,7 +92,8 @@ class Renderer:
             self._render_drag_impl(res, **args)
         except:
             res.error = CapturedException()
-        # self._end_event.record(torch.cuda.current_stream(self._device))
+        if not self._disable_timing:
+            self._end_event.record(torch.cuda.current_stream(self._device))
         if 'image' in res:
             res.image = self.to_cpu(res.image).detach().numpy()
         if 'image_pts' in res:
@@ -99,10 +104,10 @@ class Renderer:
             res.error = str(res.error)
         # if 'stop' in res and res.stop:
 
-        # if self._is_timing:
-        #     self._end_event.synchronize()
-        #     # res.render_time = self._start_event.elapsed_time(self._end_event) * 1e-3
-        #     self._is_timing = False
+        if self._is_timing and not self._disable_timing:
+            self._end_event.synchronize()
+            res.render_time = self._start_event.elapsed_time(self._end_event) * 1e-3
+            self._is_timing = False
         return res
 
     def get_network(self, pkl, key, **tweak_kwargs):
@@ -342,6 +347,7 @@ class Renderer:
             
             # Point tracking with feature matching
             with torch.no_grad():
+                print(f'Start Tracking with {points}')
                 for j, point in enumerate(points):
                     r = round(r2 / 512 * h)
                     up = max(point[0] - r, 0)
