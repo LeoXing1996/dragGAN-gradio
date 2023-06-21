@@ -14,7 +14,7 @@ from PIL import Image
 import dnnlib
 from gradio_utils import (draw_mask_on_image, draw_points_on_image,
                           on_change_single_global_state,
-                          get_latest_points_pair)
+                          get_latest_points_pair, make_watermark)
 from viz.renderer_pickable import Renderer
 
 device = 'cuda'
@@ -67,6 +67,8 @@ def create_images(image_raw, global_state, update_original=False):
     global_state["images"]["image_raw"] = image_raw
     global_state["draws"]["image_with_points"] = draw_points_on_image(
         image_raw, global_state["points"], global_state["curr_point"])
+    global_state['draws']['image_with_points'] = make_watermark(
+        global_state["draws"]["image_with_points"])
 
     if 'image_mask' not in global_state['images']:
         global_state["images"]["image_mask"] = np.ones(
@@ -82,6 +84,9 @@ def create_images(image_raw, global_state, update_original=False):
     global_state["draws"]["image_with_mask"] = draw_mask_on_image(
         global_state["images"]["image_raw"],
         global_state["images"]["image_mask"])
+
+    global_state['draws']['image_with_mask'] = make_watermark(
+        global_state["draws"]["image_with_mask"])
 
 
 with gr.Blocks() as app:
@@ -337,8 +342,9 @@ with gr.Blocks() as app:
             image_raw = global_state['generator_params'].image
             create_images(image_raw, global_state, update_original=True)
 
-            return global_state, image_raw, global_state["draws"][
-                "image_with_mask"]
+            return (global_state, 
+                    global_state["draws"]["image_with_points"],
+                    global_state["draws"]["image_with_mask"])
 
         form_pretrained_dropdown.change(
             on_change_pretrained_dropdown,
@@ -375,8 +381,9 @@ with gr.Blocks() as app:
 
             create_images(image_raw, global_state, update_original=True)
 
-            return global_state, image_raw, global_state["draws"][
-                "image_with_mask"]
+            return (global_state, 
+                    global_state['draws']['image_with_points'], 
+                    global_state["draws"]["image_with_mask"])
 
         form_reset_image.click(
             on_click_reset_image,
@@ -413,8 +420,9 @@ with gr.Blocks() as app:
 
             create_images(image_raw, global_state, update_original=True)
 
-            return global_state, image_raw, global_state["draws"][
-                "image_with_mask"]
+            return (global_state, 
+                    global_state["draws"]["image_with_points"],
+                    global_state["draws"]["image_with_mask"])
 
         form_seed_number.change(
             on_change_update_image_seed,
@@ -453,8 +461,9 @@ with gr.Blocks() as app:
             clear_state(global_state)
             create_images(image_raw, global_state, update_original=True)
 
-            return global_state, image_raw, global_state["draws"][
-                "image_with_mask"]
+            return (global_state, 
+                    global_state['draws']['image_with_points'], 
+                    global_state["draws"]["image_with_mask"])
 
         form_latent_space.change(
             on_click_latent_space,
