@@ -98,6 +98,10 @@ download_checkpoint()
 valid_checkpoints_dict = {
     f.split('/')[-1].split('.')[0]: osp.join(cache_dir, f) for f in os.listdir(cache_dir) if (f.endswith('pkl') and osp.exists(osp.join(cache_dir, f)))
 }
+print(f'File under cache_dir ({cache_dir}):')
+print(os.listdir(cache_dir))
+print('Valid checkpoint file:')
+print(valid_checkpoints_dict)
 
 init_pkl = 'stylegan_human_v2_512'
 
@@ -174,7 +178,7 @@ with gr.Blocks() as app:
 
                 with gr.Column(scale=4, min_width=10):
                     form_pretrained_dropdown = gr.Dropdown(
-                        choices=valid_checkpoints_dict.keys(),
+                        choices=list(valid_checkpoints_dict.keys()),
                         label="Pretrained model",
                         value=init_pkl,
                     )
