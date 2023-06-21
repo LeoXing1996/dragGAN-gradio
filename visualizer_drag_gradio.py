@@ -92,6 +92,7 @@ download_checkpoint()
 
 
 cache_dir = './checkpoints'
+os.makedirs(cache_dir, exist_ok=True)
 valid_checkpoints_dict = {
     f.split('/')[-1].split('.')[0]: osp.join(cache_dir, f) for f in os.listdir(cache_dir) if (f.endswith('pkl') and osp.exists(osp.join(cache_dir, f)))
 }
