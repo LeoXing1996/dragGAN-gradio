@@ -90,8 +90,11 @@ def create_images(image_raw, global_state, update_original=False):
     
 
 def download_checkpoint():
-    openxlab.download(model_repo='mmagic/DragGAN', model_name='DragGAN-Human', output='checkpoints') 
-    openxlab.download(model_repo='mmagic/DragGAN', model_name='DragGAN-Cat', output='checkpoints') 
+    download(model_repo='mmagic/DragGAN', model_name='DragGAN-Human', output='checkpoints') 
+    download(model_repo='mmagic/DragGAN', model_name='DragGAN-Cat', output='checkpoints') 
+
+
+download_checkpoint()
 
 
 with gr.Blocks() as app:
