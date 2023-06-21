@@ -2,3 +2,5 @@ __pycacye__/
 *.pkl
 *.png
 *.pyc
+checkpoints
+checkpoints/
