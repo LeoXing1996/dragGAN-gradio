@@ -18,6 +18,8 @@ from gradio_utils import (draw_mask_on_image, draw_points_on_image,
 from viz.renderer_pickable import Renderer
 
 device = 'cuda'
+cache_dir = './checkpoints'
+os.makedirs(cache_dir, exist_ok=True)
 
 
 def reverse_point_pairs(points):
@@ -83,16 +85,15 @@ def create_images(image_raw, global_state, update_original=False):
         global_state["draws"]["image_with_mask"])
     
 
+
 def download_checkpoint():
-    download(model_repo='mmagic/DragGAN', model_name='DragGAN-Human', output='checkpoints') 
-    download(model_repo='mmagic/DragGAN', model_name='DragGAN-Cat', output='checkpoints') 
+    download(model_repo='mmagic/DragGAN', model_name='DragGAN-Human', output=cache_dir) 
+    download(model_repo='mmagic/DragGAN', model_name='DragGAN-Cat', output=cache_dir) 
 
 
 download_checkpoint()
 
 
-cache_dir = './checkpoints'
-os.makedirs(cache_dir, exist_ok=True)
 valid_checkpoints_dict = {
     f.split('/')[-1].split('.')[0]: osp.join(cache_dir, f) for f in os.listdir(cache_dir) if (f.endswith('pkl') and osp.exists(osp.join(cache_dir, f)))
 }
