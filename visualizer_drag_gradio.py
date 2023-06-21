@@ -18,7 +18,8 @@ from gradio_utils import (draw_mask_on_image, draw_points_on_image,
 from viz.renderer_pickable import Renderer
 
 device = 'cuda'
-cache_dir = './checkpoints'
+# cache_dir = './checkpoints'
+cache_dir = '/home/xlab-app-center/cache'
 os.makedirs(cache_dir, exist_ok=True)
 
 
