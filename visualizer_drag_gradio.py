@@ -1,4 +1,4 @@
-from ipdb import iex
+from openxlab.model import download
 import os
 import os.path as osp
 from functools import partial
@@ -87,6 +87,11 @@ def create_images(image_raw, global_state, update_original=False):
 
     global_state['draws']['image_with_mask'] = make_watermark(
         global_state["draws"]["image_with_mask"])
+    
+
+def download_checkpoint():
+    openxlab.download(model_repo='mmagic/DragGAN', model_name='DragGAN-Human', output='checkpoints') 
+    openxlab.download(model_repo='mmagic/DragGAN', model_name='DragGAN-Cat', output='checkpoints') 
 
 
 with gr.Blocks() as app:

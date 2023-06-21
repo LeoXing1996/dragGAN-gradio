@@ -8,8 +8,6 @@
 
 """This is a pickable version of Renderer
 """
-from ipdb import iex
-
 from socket import has_dualstack_ipv6
 import sys
 import copy
