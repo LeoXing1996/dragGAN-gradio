@@ -3,7 +3,8 @@ import numpy as np
 
 from PIL import Image, ImageDraw, ImageFont
 
-# font = ImageFont.truetype(str(Path(__file__).parent / "misc/Roboto-Medium.ttf"), 32)
+font = ImageFont.truetype(
+    str(Path(__file__).parent.parent / "FreeMonoBoldOblique.otf"), 15)
 # font = ImageFont.truetype(('./Roboto-Medium.ttf'), 32)
 
 
@@ -75,7 +76,8 @@ def draw_mask_on_image(image, mask):
     im_mask_rgba = np.concatenate(
         (
             np.tile(im_mask[..., None], [1, 1, 3]),
-            45 * np.ones((im_mask.shape[0], im_mask.shape[1], 1), dtype=np.uint8),
+            45 * np.ones((im_mask.shape[0],
+                         im_mask.shape[1], 1), dtype=np.uint8),
         ),
         axis=-1,
     )
@@ -108,3 +110,35 @@ def get_latest_points_pair(points_dict):
     point_idx = list(points_dict.keys())
     latest_point_idx = max(point_idx)
     return latest_point_idx
+
+
+def make_watermark(image: Image.Image):
+
+    font_size = int(image.size[0] / 512 * 15)
+    buffer_size = int(image.size[0] / 512 * 5)
+    font = ImageFont.truetype(
+        str(Path(__file__).parent.parent / "FreeMonoBoldOblique.otf"),
+        font_size)
+
+    text = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    canvas = ImageDraw.Draw(text)
+
+    watermark_size = canvas.textbbox((0, 0), 'AI Generated', font)
+
+    watermark_l = watermark_size[2] - watermark_size[0]
+    watermark_h = watermark_size[3] - watermark_size[1]
+
+    mean_img_color = np.array(image).mean()
+    canvas.rectangle((
+            image.size[0] - watermark_l - buffer_size, 
+            image.size[1] - watermark_h - buffer_size,
+            image.size[0], 
+            image.size[1],
+        ),
+                     fill=(255, 255, 255, 255))
+    canvas.text((image.size[0] - watermark_l - buffer_size, 
+                 image.size[1] - watermark_h - buffer_size),
+                "AI Generated", font=font,
+                fill=(0, 0, 0, 255))
+    out = Image.alpha_composite(image.convert('RGBA'), text)
+    return out
