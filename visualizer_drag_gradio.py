@@ -301,11 +301,15 @@ with gr.Blocks() as app:
         with gr.Column(scale=8):
             form_image_draw = gr.Image(
                 global_state.value["draws"]["image_with_points"],
-                elem_classes="image_nonselectable")
+                visible=True,
+                # elem_classes="image_nonselectable"
+                )
             form_image_mask_draw = gr.Image(
                 global_state.value["draws"]["image_with_mask"],
                 visible=False,
-                elem_classes="image_nonselectable",
+                interactive=True,
+                tool='sketch',
+                # elem_classes="image_nonselectable",
             )
             # gr.Markdown(
             #     "Credits: Adrià Ciurana Lanau | info@dreamlearning.ai | OpenMMLab | ?"
@@ -841,18 +845,23 @@ with gr.Blocks() as app:
 
         # Image
         def on_click_enable_mask(global_state):
-            global_state['edidint_state'] = 'add_mask'
+            global_state['editing_state'] = 'add_mask'
+            img_with_mask = global_state['draws']['image_with_mask']
             return (
                 global_state,
-                gr.Image.update(visible=False),
-                gr.Image.update(visible=True),
+                gr.Image.update(visible=False, interactive=False),
+                gr.Image.update(
+                    value=img_with_mask, 
+                    interactive=True, 
+                    visible=True
+                ),
             )
 
-        enable_add_mask.click(
-            on_click_enable_mask,
-            inputs=[global_state],
-            outputs=[global_state, form_image_draw, form_image_mask_draw],
-        )
+        # enable_add_mask.click(
+        #     on_click_enable_mask,
+        #     inputs=[global_state],
+        #     outputs=[global_state, form_image_draw, form_image_mask_draw],
+        # )
 
         def on_click_enable_add_points(global_state):
             global_state['editing_state'] = 'add_points'
@@ -895,6 +904,7 @@ with gr.Blocks() as app:
                 None,  # NOTE: we hight light all points
                 # global_state["curr_point"],
             )
+            image_draw = make_watermark(image_draw)
 
             global_state["draws"]["image_with_points"] = image_draw
 
@@ -951,26 +961,26 @@ with gr.Blocks() as app:
                           inputs=[global_state],
                           outputs=[global_state, form_image_draw])
 
-        def on_click_mask(global_state, evt: gr.SelectData):
-            xy = evt.index
+        # def on_click_mask(global_state, evt: gr.SelectData):
+        #     xy = evt.index
 
-            radius_mask = int(global_state["radius_mask"])
+        #     radius_mask = int(global_state["radius_mask"])
 
-            image_mask = np.uint8(255 * global_state["images"]["image_mask"])
-            image_mask = cv2.circle(image_mask, xy, radius_mask, 0, -1) > 127
-            global_state["images"]["image_mask"] = image_mask
+        #     image_mask = np.uint8(255 * global_state["images"]["image_mask"])
+        #     image_mask = cv2.circle(image_mask, xy, radius_mask, 0, -1) > 127
+        #     global_state["images"]["image_mask"] = image_mask
 
-            image_with_mask = draw_mask_on_image(
-                global_state["images"]["image_raw"], image_mask)
-            global_state["draws"]["image_with_mask"] = image_with_mask
+        #     image_with_mask = draw_mask_on_image(
+        #         global_state["images"]["image_raw"], image_mask)
+        #     global_state["draws"]["image_with_mask"] = image_with_mask
 
-            return global_state, image_with_mask
+        #     return global_state, image_with_mask
 
-        form_image_mask_draw.select(
-            on_click_mask,
-            inputs=[global_state],
-            outputs=[global_state, form_image_mask_draw],
-        )
+        # form_image_mask_draw.select(
+        #     on_click_mask,
+        #     inputs=[global_state],
+        #     outputs=[global_state, form_image_mask_draw],
+        # )
 
 
 parser = ArgumentParser()
