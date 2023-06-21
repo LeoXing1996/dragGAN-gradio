@@ -18,12 +18,6 @@ from gradio_utils import (draw_mask_on_image, draw_points_on_image,
 from viz.renderer_pickable import Renderer
 
 device = 'cuda'
-cache_dir = './checkpoints'
-valid_checkpoints_dict = {
-    f.split('/')[-1].split('.')[0]: osp.join(cache_dir, f) for f in os.listdir(cache_dir) if (f.endswith('pkl') and osp.exists(osp.join(cache_dir, f)))
-}
-
-init_pkl = 'stylegan_human_v2_512'
 
 
 def reverse_point_pairs(points):
@@ -95,6 +89,14 @@ def download_checkpoint():
 
 
 download_checkpoint()
+
+
+cache_dir = './checkpoints'
+valid_checkpoints_dict = {
+    f.split('/')[-1].split('.')[0]: osp.join(cache_dir, f) for f in os.listdir(cache_dir) if (f.endswith('pkl') and osp.exists(osp.join(cache_dir, f)))
+}
+
+init_pkl = 'stylegan_human_v2_512'
 
 
 with gr.Blocks() as app:
