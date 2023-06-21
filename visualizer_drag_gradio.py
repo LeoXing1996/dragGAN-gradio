@@ -108,7 +108,7 @@ with gr.Blocks() as app:
             "r1_in_pixels": 3,
             "r2_in_pixels": 12,
             "magnitude_direction_in_pixels": 1.0,
-            "latent_space": "w",
+            "latent_space": "w+",
             "trunc_psi": 0.7,
             "trunc_cutoff": None,
             "lr": 0.001,
@@ -116,7 +116,7 @@ with gr.Blocks() as app:
         "device": device,
         "draw_interval": 1,
         "radius_mask": 51,
-        "renderer": Renderer(),
+        "renderer": Renderer(disable_timing=True),
         "points": {},
         "curr_point": None,
         "curr_type_point": "start",
@@ -302,9 +302,9 @@ with gr.Blocks() as app:
                 visible=False,
                 elem_classes="image_nonselectable",
             )
-            gr.Markdown(
-                "Credits: Adrià Ciurana Lanau | info@dreamlearning.ai | OpenMMLab | ?"
-            )
+            # gr.Markdown(
+            #     "Credits: Adrià Ciurana Lanau | info@dreamlearning.ai | OpenMMLab | ?"
+            # )
 
         # Network & latents tab listeners
         def on_change_pretrained_dropdown(pretrained_value, global_state,
@@ -548,6 +548,8 @@ with gr.Blocks() as app:
             p_in_pixels = []
             t_in_pixels = []
             valid_points = []
+            # import ipdb
+            # ipdb.set_trace()
 
             # Prepare the points for the inference
             if len(global_state["points"]) == 0:
@@ -611,6 +613,9 @@ with gr.Blocks() as app:
             # reverse points order
             p_to_opt = reverse_point_pairs(p_in_pixels)
             t_to_opt = reverse_point_pairs(t_in_pixels)
+            print('Running with:')
+            print(f'    Source: {p_in_pixels}')
+            print(f'    Target: {t_in_pixels}')
             step_idx = 0
             while True:
                 if global_state["temporal_params"]["stop"]:
@@ -646,11 +651,13 @@ with gr.Blocks() as app:
                         # global_state["points"][key_point]["target"] = t_i.tolist()
                         # global_state["points"][key_point]["start_temp"] = p_i
                         # global_state["points"][key_point]["target"] = t_i
+                        # print(p_to_opt)
+                        # print(t_to_opt)
                         global_state["points"][key_point]["start_temp"] = [
                             p_i[1], p_i[0]]
                         global_state["points"][key_point]["target"] = [
                             t_i[1], t_i[0]]
-
+                    print(f'Current Source : {global_state["points"][key_point]["start_temp"]}')
                     create_images(global_state['generator_params']['image'],
                                   global_state)
 
@@ -693,6 +700,8 @@ with gr.Blocks() as app:
 
             fp = NamedTemporaryFile(suffix=".png", delete=False)
             image_result.save(fp, "PNG")
+
+            global_state['editing_state'] = 'add_points'
 
             yield (
                 global_state,
@@ -918,9 +927,14 @@ with gr.Blocks() as app:
         def on_click_clear_points(global_state):
             """Function to handle clear all control points
             1. clear global_state['points'] (clear_state)
+            2. re-init network
             2. re-draw image
             """
             clear_state(global_state, target='point')
+
+            renderer: Renderer = global_state["renderer"]
+            renderer.feat_refs = None
+
             create_images(global_state['images']['image_raw'], global_state)
             return global_state, global_state['draws']['image_with_points']
 
