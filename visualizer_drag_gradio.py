@@ -279,8 +279,8 @@ with gr.Blocks() as app:
                                 form_stop_btn = gr.Button("Stop")
 
                         form_steps_number = gr.Number(value=0,
-                                                    label="Steps",
-                                                    interactive=False)
+                                                      label="Steps",
+                                                      interactive=False)
 
                 # Mask
                 with gr.Row():
@@ -338,6 +338,24 @@ with gr.Blocks() as app:
         3. Click `Edit Flexible Area` to create a mask and constrain the
            unmasked region to remain unchanged.
         """)
+    gr.HTML(
+        """
+        <style>
+            .container {
+                position: absolute;
+                height: 50px;
+                text-align: center;
+                line-height: 50px;
+                width: 100%;
+            }
+        </style>
+        <div class="container">
+        Gradio demo supported by
+        <img src="https://avatars.githubusercontent.com/u/10245193?s=200&v=4" height="20" width="20" style="display:inline;">
+        <a herf="https://github.com/open-mmlab/mmagic">OpenMMLab MMagic</a>
+        </div>
+        """
+    )
 
     # Network & latents tab listeners
     def on_change_pretrained_dropdown(pretrained_value, global_state):
