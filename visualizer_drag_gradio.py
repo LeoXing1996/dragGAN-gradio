@@ -47,8 +47,8 @@ def clear_state(global_state, target=None):
         print('Clear Points State!')
     if 'mask' in target:
         image_raw = global_state["images"]["image_raw"]
-        global_state['mask'] = np.ones(
-            (image_raw.size[1], image_raw.size[0]), dtype=np.uint8)
+        global_state['mask'] = np.ones((image_raw.size[1], image_raw.size[0]),
+                                       dtype=np.uint8)
         print('Clear mask State!')
 
     return global_state
@@ -80,24 +80,68 @@ def init_images(global_state):
         state['params']['lr']  # lr,
     )
 
-    state['renderer']._render_drag_impl(
-        state['generator_params'], is_drag=False)
+    state['renderer']._render_drag_impl(state['generator_params'],
+                                        is_drag=False)
 
+    # image_draw = make_watermark(image_draw)
     init_image = state['generator_params'].image
     state['images']['image_orig'] = init_image
     state['images']['image_raw'] = init_image
-    state['images']['image_show'] = init_image
-    state['mask'] = np.ones(
-        (init_image.size[1], init_image.size[0]), dtype=np.uint8)
+    state['images']['image_show'] = make_watermark(init_image)
+    state['mask'] = np.ones((init_image.size[1], init_image.size[0]),
+                            dtype=np.uint8)
     return global_state
 
 
-def update_image_draw(image, points, mask, show_mask):
+def update_image_draw(image, points, mask, show_mask, global_state=None):
 
     image_draw = draw_points_on_image(image, points)
-    if show_mask and mask is not None:
+    if show_mask and mask is not None and not (mask == 0).all() and not (mask == 1).all():
         image_draw = draw_mask_on_image(image_draw, mask)
+
+    image_draw = make_watermark(image_draw)
+    if global_state is not None:
+        global_state['images']['image_show'] = image_draw
     return image_draw
+
+
+def preprocess_mask_info(global_state, image):
+    """Function to handle mask information.
+    1. last_mask is None: Do not need to change mask, return mask
+    2. last_mask is not None:
+        2.1 global_state is remove_mask:
+        2.2 global_state is add_mask:
+    """
+    if isinstance(image, dict):
+        last_mask = get_valid_mask(image['mask'])
+    else:
+        last_mask = None
+    mask = global_state['mask']
+
+    # mask in global state is a placeholder with all 1.
+    if (mask == 1).all():
+        mask = last_mask
+
+    # last_mask = global_state['last_mask']
+    editing_mode = global_state['editing_state']
+
+    if last_mask is None:
+        return global_state
+
+    if editing_mode == 'remove_mask':
+        updated_mask = np.clip(mask - last_mask, 0, 1)
+        print(f'Last editing_state is {editing_mode}, do remove.')
+    elif editing_mode == 'add_mask':
+        updated_mask = np.clip(mask + last_mask, 0, 1)
+        print(f'Last editing_state is {editing_mode}, do add.')
+    else:
+        updated_mask = mask
+        print(f'Last editing_state is {editing_mode}, '
+              'do nothing to mask.')
+
+    global_state['mask'] = updated_mask
+    # global_state['last_mask'] = None  # clear buffer
+    return global_state
 
 
 def download_checkpoint():
@@ -136,8 +180,10 @@ with gr.Blocks() as app:
         "temporal_params": {
             # stop
         },
-        'mask': None,
-        'show_mask': True,  # TODO: add button
+        'mask':
+        None,  # mask for visualization, 1 for editing and 0 for unchange
+        'last_mask': None,  # last edited mask
+        'show_mask': True,  # add button
         "generator_params": dnnlib.EasyDict(),
         "params": {
             # "seed": 4211,  # cute cat ^_^
@@ -247,34 +293,36 @@ with gr.Blocks() as app:
                 with gr.Column(scale=1, min_width=10):
                     gr.Markdown(value='Mask', show_label=False)
                 with gr.Column(scale=4, min_width=10):
-                    enable_add_mask = gr.Button('Edit')
+                    enable_add_mask = gr.Button('Edit Flexible Area')
                     # TODO: do not support yet
-                    with gr.Row():
-                        with gr.Column(scale=1, min_width=10):
-                            flex_area = gr.Button('Flexible Area')
-                        with gr.Column(scale=1, min_width=10):
-                            fixed_area = gr.Button('Fixed Area')
+                    # with gr.Row():
+                    #     with gr.Column(scale=1, min_width=10):
+                    #         flex_area = gr.Button('Flexible Area')
+                    #     with gr.Column(scale=1, min_width=10):
+                    #         fixed_area = gr.Button('Fixed Area')
                     with gr.Row():
                         with gr.Column(scale=1, min_width=10):
                             form_reset_mask_btn = gr.Button("Reset mask")
                         with gr.Column(scale=1, min_width=10):
-                            show_mask = gr.Checkbox(label='Show Mask',
-                                                    show_label=False)
+                            show_mask = gr.Checkbox(
+                                label='Show Mask',
+                                value=global_state.value['show_mask'],
+                                show_label=False)
 
-                    with gr.Row():
+                    # with gr.Row():
 
-                        form_radius_mask_number = gr.Number(
-                            value=global_state.value["radius_mask"],
-                            interactive=True,
-                            label="Radius (pixels)")
-                        # with gr.Column(scale=4, min_width=10):
-                        #     form_radius_mask_number = gr.Number(
-                        #         value=global_state.value["radius_mask"],
-                        #         interactive=True,
-                        #         label="Radius (pixels)")
-                        # with gr.Column(scale=1, min_width=10):
-                        #     gr.Markdown(value='')
-                        #     gr.Markdown('Radius')
+                    # form_radius_mask_number = gr.Number(
+                    #     value=global_state.value["radius_mask"],
+                    #     interactive=True,
+                    #     label="Radius (pixels)")
+                    # with gr.Column(scale=4, min_width=10):
+                    #     form_radius_mask_number = gr.Number(
+                    #         value=global_state.value["radius_mask"],
+                    #         interactive=True,
+                    #         label="Radius (pixels)")
+                    # with gr.Column(scale=1, min_width=10):
+                    #     gr.Markdown(value='')
+                    #     gr.Markdown('Radius')
                     with gr.Row():
                         form_lambda_number = gr.Number(
                             value=global_state.value["params"]
@@ -311,8 +359,8 @@ with gr.Blocks() as app:
         with gr.Column(scale=8):
             form_image = ImageMask(
                 value=global_state.value['images']['image_show'],
-                brush_radius=20
-            ).style(width=1024, height=1024)  # NOTE: hard image size code here.
+                brush_radius=20).style(
+                    width=768, height=768)  # NOTE: hard image size code here.
 
         # Network & latents tab listeners
         def on_change_pretrained_dropdown(pretrained_value, global_state):
@@ -382,10 +430,9 @@ with gr.Blocks() as app:
 
             return global_state, global_state['images']['image_show']
 
-        form_latent_space.change(
-            on_click_latent_space,
-            inputs=[form_latent_space, global_state],
-            outputs=[global_state, form_image])
+        form_latent_space.change(on_click_latent_space,
+                                 inputs=[form_latent_space, global_state],
+                                 outputs=[global_state, form_image])
 
         # ==== Params
         form_lambda_number.change(
@@ -433,24 +480,36 @@ with gr.Blocks() as app:
             outputs=[global_state],
         )
 
-        def on_click_start(global_state):
+        def on_click_start(global_state, image):
             p_in_pixels = []
             t_in_pixels = []
             valid_points = []
 
+            # handle of start drag in mask editing mode
+            global_state = preprocess_mask_info(global_state, image)
+            # if global_state['editing_state'] in ['add_mask', 'remove_mask']:
+            #     global_state['mask'] = get_valid_mask(image['mask'])
+            #     # TODO: handle mask
+            #     print(f'Start Drag in \'{global_state["editing_state"]}\' mode. '
+            #           'Add mask to global state.')
+
             # Prepare the points for the inference
             if len(global_state["points"]) == 0:
-                # image_draw = draw_points_on_image(
-                #     global_state["draws"]["image_with_points"],
-                #     global_state["points"],
-                #     global_state["curr_point"],
-                # )
-                return (
+                # yield on_click_start_wo_points(global_state, image)
+                image_raw = global_state['images']['image_raw']
+                update_image_draw(
+                    image_raw,
+                    global_state['points'],
+                    global_state['mask'],
+                    global_state['show_mask'],
+                    global_state,
+                )
+                # global_state['images']['image_show'] = image_draw
+
+                yield (
                     global_state,
                     0,
                     global_state['images']['image_show'],
-                    # image_draw,
-                    # image_draw,
                     gr.File.update(visible=False),
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
@@ -470,165 +529,168 @@ with gr.Blocks() as app:
                     gr.Button.update(interactive=True),
                     gr.Button.update(interactive=True),
                     gr.Checkbox.update(interactive=True),
-                    gr.Number.update(interactive=True),
+                    # gr.Number.update(interactive=True),
                     gr.Number.update(interactive=True),
                 )
+            else:
 
-            # Transform the points into torch tensors
-            for key_point, point in global_state["points"].items():
-                try:
-                    p_start = point.get("start_temp", point["start"])
-                    p_end = point["target"]
+                # Transform the points into torch tensors
+                for key_point, point in global_state["points"].items():
+                    try:
+                        p_start = point.get("start_temp", point["start"])
+                        p_end = point["target"]
 
-                    if p_start is None or p_end is None:
+                        if p_start is None or p_end is None:
+                            continue
+
+                    except KeyError:
                         continue
 
-                except KeyError:
-                    continue
+                    p_in_pixels.append(p_start)
+                    t_in_pixels.append(p_end)
+                    valid_points.append(key_point)
 
-                p_in_pixels.append(p_start)
-                t_in_pixels.append(p_end)
-                valid_points.append(key_point)
+                mask = torch.tensor(global_state['mask']).float()
+                drag_mask = 1 - mask
 
-            # mask_in_pixels = torch.tensor(
-            #     global_state["images"]["image_mask"]).float()
-            # TODO: check this
-            mask_in_pixels = torch.tensor(
-                global_state['mask']).float()
+                renderer: Renderer = global_state["renderer"]
+                global_state['temporal_params']['stop'] = False
+                global_state['editing_state'] = 'running'
 
-            renderer: Renderer = global_state["renderer"]
-            global_state['temporal_params']['stop'] = False
-            global_state['editing_state'] = 'running'
+                # reverse points order
+                p_to_opt = reverse_point_pairs(p_in_pixels)
+                t_to_opt = reverse_point_pairs(t_in_pixels)
+                print('Running with:')
+                print(f'    Source: {p_in_pixels}')
+                print(f'    Target: {t_in_pixels}')
+                step_idx = 0
+                while True:
+                    if global_state["temporal_params"]["stop"]:
+                        break
 
-            # reverse points order
-            p_to_opt = reverse_point_pairs(p_in_pixels)
-            t_to_opt = reverse_point_pairs(t_in_pixels)
-            print('Running with:')
-            print(f'    Source: {p_in_pixels}')
-            print(f'    Target: {t_in_pixels}')
-            step_idx = 0
-            while True:
-                if global_state["temporal_params"]["stop"]:
-                    break
+                    # do drage here!
+                    renderer._render_drag_impl(
+                        global_state['generator_params'],
+                        p_to_opt,  # point
+                        t_to_opt,  # target
+                        drag_mask,  # mask,
+                        global_state['params']['motion_lambda'],  # lambda_mask
+                        reg=0,
+                        feature_idx=5,  # NOTE: do not support change for now
+                        r1=global_state['params']['r1_in_pixels'],  # r1
+                        r2=global_state['params']['r2_in_pixels'],  # r2
+                        # random_seed     = 0,
+                        # noise_mode      = 'const',
+                        trunc_psi=global_state['params']['trunc_psi'],
+                        # force_fp32      = False,
+                        # layer_name      = None,
+                        # sel_channels    = 3,
+                        # base_channel    = 0,
+                        # img_scale_db    = 0,
+                        # img_normalize   = False,
+                        # untransform     = False,
+                        is_drag=True)
 
-                # do drage here!
-                renderer._render_drag_impl(
-                    global_state['generator_params'],
-                    p_to_opt,  # point
-                    t_to_opt,  # target
-                    mask_in_pixels,  # mask,
-                    global_state['params']['motion_lambda'],  # lambda_mask
-                    reg=0,
-                    feature_idx=5,  # NOTE: do not support change for now
-                    r1=global_state['params']['r1_in_pixels'],  # r1
-                    r2=global_state['params']['r2_in_pixels'],  # r2
-                    # random_seed     = 0,
-                    # noise_mode      = 'const',
-                    trunc_psi=global_state['params']['trunc_psi'],
-                    # force_fp32      = False,
-                    # layer_name      = None,
-                    # sel_channels    = 3,
-                    # base_channel    = 0,
-                    # img_scale_db    = 0,
-                    # img_normalize   = False,
-                    # untransform     = False,
-                    is_drag=True)
+                    if step_idx % global_state['draw_interval'] == 0:
+                        print('Current Source:')
+                        for key_point, p_i, t_i in zip(valid_points, p_to_opt,
+                                                       t_to_opt):
+                            global_state["points"][key_point]["start_temp"] = [
+                                p_i[1],
+                                p_i[0],
+                            ]
+                            global_state["points"][key_point]["target"] = [
+                                t_i[1],
+                                t_i[0],
+                            ]
+                            start_temp = global_state["points"][key_point][
+                                "start_temp"]
+                            print(f'    {start_temp}')
 
-                if step_idx % global_state['draw_interval'] == 0:
-                    for key_point, p_i, t_i in zip(valid_points, p_to_opt,
-                                                   t_to_opt):
-                        global_state["points"][key_point]["start_temp"] = [
-                            p_i[1], p_i[0]
-                        ]
-                        global_state["points"][key_point]["target"] = [
-                            t_i[1], t_i[0]
-                        ]
-                    print(
-                        f'Current Source : {global_state["points"][key_point]["start_temp"]}'
+                        image_result = global_state['generator_params'][
+                            'image']
+                        image_draw = update_image_draw(
+                            image_result,
+                            global_state['points'],
+                            global_state['mask'],
+                            global_state['show_mask'],
+                            global_state,
+                        )
+                        global_state['images']['image_raw'] = image_result
+
+                    yield (
+                        global_state,
+                        step_idx,
+                        global_state['images']['image_show'],
+                        gr.File.update(visible=False),
+                        gr.Button.update(interactive=False),
+                        gr.Button.update(interactive=False),
+                        gr.Button.update(interactive=False),
+                        gr.Button.update(interactive=False),
+                        gr.Button.update(interactive=False),
+                        # latent space
+                        gr.Radio.update(interactive=False),
+                        gr.Button.update(interactive=False),
+                        # enable stop button in loop
+                        gr.Button.update(interactive=True),
+
+                        # update other comps
+                        gr.Dropdown.update(interactive=False),
+                        gr.Number.update(interactive=False),
+                        gr.Number.update(interactive=False),
+                        gr.Button.update(interactive=False),
+                        gr.Button.update(interactive=False),
+                        gr.Checkbox.update(interactive=False),
+                        # gr.Number.update(interactive=False),
+                        gr.Number.update(interactive=False),
                     )
-                    image_result = global_state['generator_params']['image']
-                    image_draw = update_image_draw(
-                        image_result,
-                        global_state['points'],
-                        global_state['mask'],
-                        global_state['show_mask'],
-                    )
-                    global_state['images']['image_raw'] = image_result
-                    global_state['images']['image_show'] = image_draw
+
+                    # increate step
+                    step_idx += 1
+
+                image_result = global_state['generator_params']['image']
+                global_state['images']['image_raw'] = image_result
+                image_draw = update_image_draw(image_result,
+                                               global_state['points'],
+                                               global_state['mask'],
+                                               global_state['show_mask'],
+                                               global_state)
+
+                fp = NamedTemporaryFile(suffix=".png", delete=False)
+                image_result.save(fp, "PNG")
+
+                global_state['editing_state'] = 'add_points'
 
                 yield (
                     global_state,
-                    step_idx,
+                    0,  # reset step to 0 after stop.
                     global_state['images']['image_show'],
-                    gr.File.update(visible=False),
-                    gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=False),
-                    # latent space
-                    gr.Radio.update(interactive=False),
-                    gr.Button.update(interactive=False),
-                    # enable stop button in loop
+                    gr.File.update(visible=True, value=fp.name),
                     gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    # latent space
+                    gr.Radio.update(interactive=True),
+                    gr.Button.update(interactive=True),
+                    # NOTE: disable stop button with loop finish
+                    gr.Button.update(interactive=False),
 
                     # update other comps
-                    gr.Dropdown.update(interactive=False),
-                    gr.Number.update(interactive=False),
-                    gr.Number.update(interactive=False),
-                    gr.Button.update(interactive=False),
-                    gr.Button.update(interactive=False),
-                    gr.Checkbox.update(interactive=False),
-                    gr.Number.update(interactive=False),
-                    gr.Number.update(interactive=False),
+                    gr.Dropdown.update(interactive=True),
+                    gr.Number.update(interactive=True),
+                    gr.Number.update(interactive=True),
+                    # gr.Button.update(interactive=True),
+                    # gr.Button.update(interactive=True),
+                    gr.Checkbox.update(interactive=True),
+                    # gr.Number.update(interactive=True),
+                    gr.Number.update(interactive=True),
                 )
-
-                # increate step
-                step_idx += 1
-
-            image_result = global_state['generator_params']['image']
-            global_state['images']['image_raw'] = image_result
-            image_draw = update_image_draw(
-                image_result,
-                global_state['points'],
-                global_state['mask'],
-                global_state['show_mask'])
-
-            fp = NamedTemporaryFile(suffix=".png", delete=False)
-            image_result.save(fp, "PNG")
-
-            global_state['editing_state'] = 'add_points'
-
-            yield (
-                global_state,
-                0,  # reset step to 0 after stop.
-                global_state['images']['image_show'],
-                gr.File.update(visible=True, value=fp.name),
-                gr.Button.update(interactive=True),
-                gr.Button.update(interactive=True),
-                gr.Button.update(interactive=True),
-                gr.Button.update(interactive=True),
-                gr.Button.update(interactive=True),
-                # latent space
-                gr.Radio.update(interactive=True),
-                gr.Button.update(interactive=True),
-                # NOTE: disable stop button with loop finish
-                gr.Button.update(interactive=False),
-
-                # update other comps
-                gr.Dropdown.update(interactive=True),
-                gr.Number.update(interactive=True),
-                gr.Number.update(interactive=True),
-                gr.Button.update(interactive=True),
-                gr.Button.update(interactive=True),
-                gr.Checkbox.update(interactive=True),
-                gr.Number.update(interactive=True),
-                gr.Number.update(interactive=True),
-            )
 
         form_start_btn.click(
             on_click_start,
-            inputs=[global_state],
+            inputs=[global_state, form_image],
             outputs=[
                 global_state,
                 form_steps_number,
@@ -648,10 +710,10 @@ with gr.Blocks() as app:
                 form_pretrained_dropdown,
                 form_seed_number,
                 form_lr_number,
-                flex_area,
-                fixed_area,
+                # flex_area,
+                # fixed_area,
                 show_mask,
-                form_radius_mask_number,
+                # form_radius_mask_number,
                 form_lambda_number,
             ],
         )
@@ -702,11 +764,11 @@ with gr.Blocks() as app:
                 ),
                 dtype=np.uint8,
             )
-            image_draw = update_image_draw(
-                global_state['images']['image_raw'],
-                global_state['points'],
-                global_state['mask'],
-                global_state['show_mask'])
+            image_draw = update_image_draw(global_state['images']['image_raw'],
+                                           global_state['points'],
+                                           global_state['mask'],
+                                           global_state['show_mask'],
+                                           global_state)
             return global_state, image_draw
 
         form_reset_mask_btn.click(
@@ -715,55 +777,80 @@ with gr.Blocks() as app:
             outputs=[global_state, form_image],
         )
 
-        form_radius_mask_number.change(
-            partial(
-                on_change_single_global_state,
-                "radius_mask",
-                map_transform=lambda x: int(x),
-            ),
-            inputs=[form_radius_mask_number, global_state],
-            outputs=[global_state],
-        )
+        # form_radius_mask_number.change(
+        #     partial(
+        #         on_change_single_global_state,
+        #         "radius_mask",
+        #         map_transform=lambda x: int(x),
+        #     ),
+        #     inputs=[form_radius_mask_number, global_state],
+        #     outputs=[global_state],
+        # )
 
         # Image
-        def on_click_enable_draw(global_state):
-            """Function switch from add point mode to add mask mode.
-            1. Change editing state to add_mask
-            2. Set curr image with points and mask
+        def on_click_enable_draw(global_state, image):
+            """Function to start add mask mode.
+            1. Preprocess mask info from last state
+            2. Change editing state to add_mask
+            3. Set curr image with points and mask
             """
+            global_state = preprocess_mask_info(global_state, image)
             global_state['editing_state'] = 'add_mask'
             image_raw = global_state['images']['image_raw']
             image_draw = update_image_draw(image_raw, global_state['points'],
-                                           global_state['mask'], True)
-            global_state['images']['image_show'] = image_draw
+                                           global_state['mask'], True,
+                                           global_state)
+            # return (global_state,
+            #         gr.Image.update(value=image_draw, interactive=True),
+            #         gr.Checkbox(interactive=False))
+            return (global_state,
+                    gr.Image.update(value=image_draw, interactive=True))
+
+        def on_click_remove_draw(global_state, image):
+            """Function to start remove mask mode.
+            1. Preprocess mask info from last state
+            2. Change editing state to remove_mask
+            3. Set curr image with points and mask
+            """
+            global_state = preprocess_mask_info(global_state, image)
+            global_state['edinting_state'] = 'remove_mask'
+            image_raw = global_state['images']['image_raw']
+            image_draw = update_image_draw(image_raw, global_state['points'],
+                                           global_state['mask'], True,
+                                           global_state)
+            # return (global_state,
+            #         gr.Image.update(value=image_draw, interactive=True),
+            #         gr.Checkbox(interactive=False))
             return (global_state,
                     gr.Image.update(value=image_draw, interactive=True))
 
         enable_add_mask.click(on_click_enable_draw,
-                              inputs=[global_state],
-                              outputs=[global_state, form_image])
+                              inputs=[global_state, form_image],
+                              outputs=[
+                                  global_state,
+                                  form_image,
+                              ])
 
-        def on_click_enable_add_points(global_state):
-            global_state['editing_state'] = 'add_points'
-            return (
-                global_state,
-                gr.Image.update(visible=True),
-                gr.Image.update(visible=False),
-            )
+        # fixed_area.click(on_click_remove_draw,
+        #                  inputs=[global_state, form_image],
+        #                  outputs=[global_state, form_image,])
 
         def on_click_add_point(global_state, image: dict):
             """Function switch from add mask mode to add points mode.
-            1. Save mask buffer
+            1. Updaste mask buffer if need
             2. Change global_state['editing_state'] to 'add_points'
             3. Set current image with mask
             """
+            # if global_state['editing_state'] == 'add_mask':
+            #     global_state['mask'] = get_valid_mask(image['mask'])
+
+            global_state = preprocess_mask_info(global_state, image)
             global_state['editing_state'] = 'add_points'
-            global_state['mask'] = get_valid_mask(image['mask'])
+            mask = global_state['mask']
             image_raw = global_state['images']['image_raw']
-            image_draw = update_image_draw(
-                image_raw, global_state['points'],
-                global_state['mask'],
-                global_state['show_mask'])
+            image_draw = update_image_draw(image_raw, global_state['points'],
+                                           mask, global_state['show_mask'],
+                                           global_state)
 
             return (global_state,
                     gr.Image.update(value=image_draw, interactive=False))
@@ -801,8 +888,9 @@ with gr.Blocks() as app:
                 global_state['points'],
                 global_state['mask'],
                 global_state['show_mask'],
+                global_state,
             )
-            image_draw = make_watermark(image_draw)
+            # image_draw = make_watermark(image_draw)
 
             return global_state, image_draw
 
@@ -824,17 +912,36 @@ with gr.Blocks() as app:
             renderer.feat_refs = None
 
             image_raw = global_state['images']['image_raw']
-            image_draw = update_image_draw(
-                image_raw,
-                {},
-                global_state['mask'],
-                global_state['show_mask'])
+            image_draw = update_image_draw(image_raw, {}, global_state['mask'],
+                                           global_state['show_mask'],
+                                           global_state)
             return global_state, image_draw
 
         undo_points.click(on_click_clear_points,
                           inputs=[global_state],
                           outputs=[global_state, form_image])
 
+    def on_click_show_mask(global_state, show_mask):
+        """Function to control whether show mask on image.
+        TODO: should we disable this button when edit mask?
+        """
+        global_state['show_mask'] = show_mask
+
+        image_raw = global_state['images']['image_raw']
+        image_draw = update_image_draw(
+            image_raw,
+            global_state['points'],
+            global_state['mask'],
+            global_state['show_mask'],
+            global_state,
+        )
+        return global_state, image_draw
+
+    show_mask.change(
+        on_click_show_mask,
+        inputs=[global_state, show_mask],
+        outputs=[global_state, form_image],
+    )
 
 parser = ArgumentParser()
 parser.add_argument('--share', action='store_true')

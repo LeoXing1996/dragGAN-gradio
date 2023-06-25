@@ -29,7 +29,7 @@ class ImageMask(gr.components.Image):
                                                      ] and type(x) != dict:
             decode_image = gr.processing_utils.decode_base64_to_image(x)
             width, height = decode_image.size
-            mask = np.zeros((height, width, 4), dtype=np.uint8)
+            mask = np.ones((height, width, 4), dtype=np.uint8)
             mask[..., -1] = 255
             mask = self.postprocess(mask)
             x = {'image': x, 'mask': mask}
@@ -37,6 +37,8 @@ class ImageMask(gr.components.Image):
 
 
 def get_valid_mask(mask: np.ndarray):
+    """Convert mask from gr.Image(0 to 255, RGBA) to binary mask.
+    """
     if mask.ndim == 3:
         mask_pil = Image.fromarray(mask).convert('L')
         mask = np.array(mask_pil)

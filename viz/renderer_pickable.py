@@ -60,7 +60,7 @@ class Renderer:
         # self._end_event     = torch.cuda.Event(enable_timing=True)
         self._net_layers    = dict()    # {cache_key: [dnnlib.EasyDict, ...], ...}
         self._is_old        = False
-        self._disable_timing = disable_timing 
+        self._disable_timing = disable_timing
 
     def render(self, **args):
         if self._disable_timing:
@@ -342,7 +342,7 @@ class Renderer:
                     py, px = round(point[0]), round(point[1])
                     self.feat_refs.append(self.feat0_resize[:,:,py,px])
                 self.points0_pt = torch.Tensor(points).unsqueeze(0).to(self._device) # 1, N, 2
-            
+
             # Point tracking with feature matching
             with torch.no_grad():
                 print(f'Start Tracking with {points}')
