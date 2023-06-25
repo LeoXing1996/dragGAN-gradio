@@ -2,7 +2,6 @@ import os
 import os.path as osp
 from argparse import ArgumentParser
 from functools import partial
-from tempfile import NamedTemporaryFile
 
 import gradio as gr
 import numpy as np
@@ -12,7 +11,7 @@ import dnnlib
 from gradio_utils import (ImageMask, draw_mask_on_image, draw_points_on_image,
                           get_latest_points_pair, get_valid_mask,
                           make_watermark, on_change_single_global_state)
-from viz.renderer_pickable import Renderer
+from viz.renderer import Renderer
 
 try:
     from openxlab.model import download
@@ -96,7 +95,7 @@ def init_images(global_state):
     )
 
     state['renderer']._render_drag_impl(state['generator_params'],
-                                        is_drag=False)
+                                        is_drag=False, to_pil=True)
 
     # image_draw = make_watermark(image_draw)
     init_image = state['generator_params'].image
@@ -557,7 +556,8 @@ with gr.Blocks() as app:
                     # img_scale_db    = 0,
                     # img_normalize   = False,
                     # untransform     = False,
-                    is_drag=True)
+                    is_drag=True,
+                    to_pil=True)
 
                 if step_idx % global_state['draw_interval'] == 0:
                     print('Current Source:')
