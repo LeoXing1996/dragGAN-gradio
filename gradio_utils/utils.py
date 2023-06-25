@@ -1,6 +1,7 @@
 from pathlib import Path
-import numpy as np
 
+import gradio as gr
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 font = ImageFont.truetype(
@@ -8,7 +9,47 @@ font = ImageFont.truetype(
 # font = ImageFont.truetype(('./Roboto-Medium.ttf'), 32)
 
 
-def draw_points_on_image(image, points, curr_point=None, highlight_all=True, radius_scale=0.01):
+class ImageMask(gr.components.Image):
+    """
+    Sets: source="canvas", tool="sketch"
+    """
+
+    is_template = True
+
+    def __init__(self, **kwargs):
+        super().__init__(source="upload",
+                         tool="sketch",
+                         interactive=False,
+                         **kwargs)
+
+    def preprocess(self, x):
+        if x is None:
+            return x
+        if self.tool == "sketch" and self.source in ["upload", "webcam"
+                                                     ] and type(x) != dict:
+            decode_image = gr.processing_utils.decode_base64_to_image(x)
+            width, height = decode_image.size
+            mask = np.zeros((height, width, 4), dtype=np.uint8)
+            mask[..., -1] = 255
+            mask = self.postprocess(mask)
+            x = {'image': x, 'mask': mask}
+        return super().preprocess(x)
+
+
+def get_valid_mask(mask: np.ndarray):
+    if mask.ndim == 3:
+        mask_pil = Image.fromarray(mask).convert('L')
+        mask = np.array(mask_pil)
+    if mask.max() == 255:
+        mask = mask / 255
+    return mask
+
+
+def draw_points_on_image(image,
+                         points,
+                         curr_point=None,
+                         highlight_all=True,
+                         radius_scale=0.01):
     overlay_rgba = Image.new("RGBA", image.size, 0)
     overlay_draw = ImageDraw.Draw(overlay_rgba)
     for point_key, point in points.items():
@@ -68,7 +109,8 @@ def draw_points_on_image(image, points, curr_point=None, highlight_all=True, rad
                 # overlay_draw.text(t_draw, "t", font=font, align="center", fill=(0, 0, 0))
                 overlay_draw.text(t_draw, "t", align="center", fill=(0, 0, 0))
 
-    return Image.alpha_composite(image.convert("RGBA"), overlay_rgba).convert("RGB")
+    return Image.alpha_composite(image.convert("RGBA"),
+                                 overlay_rgba).convert("RGB")
 
 
 def draw_mask_on_image(image, mask):
@@ -76,17 +118,21 @@ def draw_mask_on_image(image, mask):
     im_mask_rgba = np.concatenate(
         (
             np.tile(im_mask[..., None], [1, 1, 3]),
-            45 * np.ones((im_mask.shape[0],
-                         im_mask.shape[1], 1), dtype=np.uint8),
+            45 * np.ones(
+                (im_mask.shape[0], im_mask.shape[1], 1), dtype=np.uint8),
         ),
         axis=-1,
     )
     im_mask_rgba = Image.fromarray(im_mask_rgba).convert("RGBA")
 
-    return Image.alpha_composite(image.convert("RGBA"), im_mask_rgba).convert("RGB")
+    return Image.alpha_composite(image.convert("RGBA"),
+                                 im_mask_rgba).convert("RGB")
 
 
-def on_change_single_global_state(keys, value, global_state, map_transform=None):
+def on_change_single_global_state(keys,
+                                  value,
+                                  global_state,
+                                  map_transform=None):
     if map_transform is not None:
         value = map_transform(value)
 
@@ -128,17 +174,16 @@ def make_watermark(image: Image.Image):
     watermark_l = watermark_size[2] - watermark_size[0]
     watermark_h = watermark_size[3] - watermark_size[1]
 
-    mean_img_color = np.array(image).mean()
     canvas.rectangle((
-            image.size[0] - watermark_l - buffer_size, 
-            image.size[1] - watermark_h - buffer_size,
-            image.size[0], 
-            image.size[1],
-        ),
-                     fill=(255, 255, 255, 255))
-    canvas.text((image.size[0] - watermark_l - buffer_size, 
+        image.size[0] - watermark_l - buffer_size,
+        image.size[1] - watermark_h - buffer_size,
+        image.size[0],
+        image.size[1],
+    ), fill=(255, 255, 255, 255))
+    canvas.text((image.size[0] - watermark_l - buffer_size,
                  image.size[1] - watermark_h - buffer_size),
-                "AI Generated", font=font,
+                "AI Generated",
+                font=font,
                 fill=(0, 0, 0, 255))
     out = Image.alpha_composite(image.convert('RGBA'), text)
     return out
