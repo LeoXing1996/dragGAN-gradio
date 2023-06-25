@@ -16,13 +16,28 @@ from viz.renderer_pickable import Renderer
 
 try:
     from openxlab.model import download
+    is_openxlab = True
+except Exception:
+    is_openxlab = False
+
+parser = ArgumentParser()
+parser.add_argument('--share', action='store_true')
+parser.add_argument('--cache-dir', type=str, default='./checkpoints')
+args = parser.parse_args()
+
+if is_openxlab:
     cache_dir = '/home/xlab-app-center/cache'
-except ImportError:
-    download = None
-    cache_dir = './checkpoints'
+    os.makedirs(cache_dir, exist_ok=True)
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Human',
+             output=cache_dir)
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Cat',
+             output=cache_dir)
+else:
+    cache_dir = args.cache_dir
 
 device = 'cuda'
-os.makedirs(cache_dir, exist_ok=True)
 
 
 def reverse_point_pairs(points):
@@ -96,7 +111,8 @@ def init_images(global_state):
 def update_image_draw(image, points, mask, show_mask, global_state=None):
 
     image_draw = draw_points_on_image(image, points)
-    if show_mask and mask is not None and not (mask == 0).all() and not (mask == 1).all():
+    if show_mask and mask is not None and not (mask == 0).all() and not (
+            mask == 1).all():
         image_draw = draw_mask_on_image(image_draw, mask)
 
     image_draw = make_watermark(image_draw)
@@ -144,18 +160,6 @@ def preprocess_mask_info(global_state, image):
     return global_state
 
 
-def download_checkpoint():
-    download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Human',
-             output=cache_dir)
-    download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Cat',
-             output=cache_dir)
-
-
-if download is not None:
-    download_checkpoint()
-
 valid_checkpoints_dict = {
     f.split('/')[-1].split('.')[0]: osp.join(cache_dir, f)
     for f in os.listdir(cache_dir)
@@ -175,7 +179,7 @@ with gr.Blocks() as app:
         "images": {
             # image_orig: the original image, change with seed/model is changed
             # image_raw: image with mask and points, change durning optimization
-            # show: image showed on screen
+            # image_show: image showed on screen
         },
         "temporal_params": {
             # stop
@@ -186,7 +190,6 @@ with gr.Blocks() as app:
         'show_mask': True,  # add button
         "generator_params": dnnlib.EasyDict(),
         "params": {
-            # "seed": 4211,  # cute cat ^_^
             "seed": 0,
             "motion_lambda": 20,
             "r1_in_pixels": 3,
@@ -199,7 +202,6 @@ with gr.Blocks() as app:
         },
         "device": device,
         "draw_interval": 1,
-        "radius_mask": 51,
         "renderer": Renderer(disable_timing=True),
         "points": {},
         "curr_point": None,
@@ -214,9 +216,7 @@ with gr.Blocks() as app:
     with gr.Row():
 
         with gr.Column(scale=3):
-            # gr.HighlightedText([('Network & Latent')], show_label=False)
 
-            # network and latent
             with gr.Row():
 
                 with gr.Column(scale=1, min_width=10):
@@ -234,18 +234,6 @@ with gr.Blocks() as app:
                     gr.Markdown(value='Latent', show_label=False)
 
                 with gr.Column(scale=4, min_width=10):
-                    # with gr.Row():
-                    #     with gr.Column(scale=1, min_width=10):
-                    #         form_seed_number = gr.Number(
-                    #                     value=42,
-                    #                     interactive=True,
-                    #                     label="Seed",
-                    #                 )
-                    #     with gr.Column(scale=2, min_width=10):
-                    #         form_lr_number = gr.Number(
-                    #             value=global_state.value["params"]["lr"],
-                    #             interactive=True,
-                    #             label="LR")
                     form_seed_number = gr.Number(
                         value=global_state.value['params']['seed'],
                         interactive=True,
@@ -294,12 +282,6 @@ with gr.Blocks() as app:
                     gr.Markdown(value='Mask', show_label=False)
                 with gr.Column(scale=4, min_width=10):
                     enable_add_mask = gr.Button('Edit Flexible Area')
-                    # TODO: do not support yet
-                    # with gr.Row():
-                    #     with gr.Column(scale=1, min_width=10):
-                    #         flex_area = gr.Button('Flexible Area')
-                    #     with gr.Column(scale=1, min_width=10):
-                    #         fixed_area = gr.Button('Fixed Area')
                     with gr.Row():
                         with gr.Column(scale=1, min_width=10):
                             form_reset_mask_btn = gr.Button("Reset mask")
@@ -309,20 +291,6 @@ with gr.Blocks() as app:
                                 value=global_state.value['show_mask'],
                                 show_label=False)
 
-                    # with gr.Row():
-
-                    # form_radius_mask_number = gr.Number(
-                    #     value=global_state.value["radius_mask"],
-                    #     interactive=True,
-                    #     label="Radius (pixels)")
-                    # with gr.Column(scale=4, min_width=10):
-                    #     form_radius_mask_number = gr.Number(
-                    #         value=global_state.value["radius_mask"],
-                    #         interactive=True,
-                    #         label="Radius (pixels)")
-                    # with gr.Column(scale=1, min_width=10):
-                    #     gr.Markdown(value='')
-                    #     gr.Markdown('Radius')
                     with gr.Row():
                         form_lambda_number = gr.Number(
                             value=global_state.value["params"]
@@ -487,11 +455,6 @@ with gr.Blocks() as app:
 
             # handle of start drag in mask editing mode
             global_state = preprocess_mask_info(global_state, image)
-            # if global_state['editing_state'] in ['add_mask', 'remove_mask']:
-            #     global_state['mask'] = get_valid_mask(image['mask'])
-            #     # TODO: handle mask
-            #     print(f'Start Drag in \'{global_state["editing_state"]}\' mode. '
-            #           'Add mask to global state.')
 
             # Prepare the points for the inference
             if len(global_state["points"]) == 0:
@@ -504,7 +467,6 @@ with gr.Blocks() as app:
                     global_state['show_mask'],
                     global_state,
                 )
-                # global_state['images']['image_show'] = image_draw
 
                 yield (
                     global_state,
@@ -681,10 +643,7 @@ with gr.Blocks() as app:
                     gr.Dropdown.update(interactive=True),
                     gr.Number.update(interactive=True),
                     gr.Number.update(interactive=True),
-                    # gr.Button.update(interactive=True),
-                    # gr.Button.update(interactive=True),
                     gr.Checkbox.update(interactive=True),
-                    # gr.Number.update(interactive=True),
                     gr.Number.update(interactive=True),
                 )
 
@@ -710,10 +669,7 @@ with gr.Blocks() as app:
                 form_pretrained_dropdown,
                 form_seed_number,
                 form_lr_number,
-                # flex_area,
-                # fixed_area,
                 show_mask,
-                # form_radius_mask_number,
                 form_lambda_number,
             ],
         )
@@ -777,16 +733,6 @@ with gr.Blocks() as app:
             outputs=[global_state, form_image],
         )
 
-        # form_radius_mask_number.change(
-        #     partial(
-        #         on_change_single_global_state,
-        #         "radius_mask",
-        #         map_transform=lambda x: int(x),
-        #     ),
-        #     inputs=[form_radius_mask_number, global_state],
-        #     outputs=[global_state],
-        # )
-
         # Image
         def on_click_enable_draw(global_state, image):
             """Function to start add mask mode.
@@ -800,9 +746,6 @@ with gr.Blocks() as app:
             image_draw = update_image_draw(image_raw, global_state['points'],
                                            global_state['mask'], True,
                                            global_state)
-            # return (global_state,
-            #         gr.Image.update(value=image_draw, interactive=True),
-            #         gr.Checkbox(interactive=False))
             return (global_state,
                     gr.Image.update(value=image_draw, interactive=True))
 
@@ -818,9 +761,6 @@ with gr.Blocks() as app:
             image_draw = update_image_draw(image_raw, global_state['points'],
                                            global_state['mask'], True,
                                            global_state)
-            # return (global_state,
-            #         gr.Image.update(value=image_draw, interactive=True),
-            #         gr.Checkbox(interactive=False))
             return (global_state,
                     gr.Image.update(value=image_draw, interactive=True))
 
@@ -831,18 +771,12 @@ with gr.Blocks() as app:
                                   form_image,
                               ])
 
-        # fixed_area.click(on_click_remove_draw,
-        #                  inputs=[global_state, form_image],
-        #                  outputs=[global_state, form_image,])
-
         def on_click_add_point(global_state, image: dict):
             """Function switch from add mask mode to add points mode.
             1. Updaste mask buffer if need
             2. Change global_state['editing_state'] to 'add_points'
             3. Set current image with mask
             """
-            # if global_state['editing_state'] == 'add_mask':
-            #     global_state['mask'] = get_valid_mask(image['mask'])
 
             global_state = preprocess_mask_info(global_state, image)
             global_state['editing_state'] = 'add_points'
@@ -890,7 +824,6 @@ with gr.Blocks() as app:
                 global_state['show_mask'],
                 global_state,
             )
-            # image_draw = make_watermark(image_draw)
 
             return global_state, image_draw
 
@@ -942,10 +875,6 @@ with gr.Blocks() as app:
         inputs=[global_state, show_mask],
         outputs=[global_state, form_image],
     )
-
-parser = ArgumentParser()
-parser.add_argument('--share', action='store_true')
-args = parser.parse_args()
 
 gr.close_all()
 app.queue(concurrency_count=5, max_size=20)
