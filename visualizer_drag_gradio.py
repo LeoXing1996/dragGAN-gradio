@@ -30,7 +30,7 @@ args = parser.parse_args()
 # cache_dir = args.cache_dir
 
 if is_openxlab:
-    cache_dir = '/home/xlab-app-center/.cache'
+    cache_dir = '/home/xlab-app-center/.cache/model'
     os.makedirs(cache_dir, exist_ok=True)
     download(model_repo='mmagic/DragGAN',
              model_name='DragGAN-Human')
