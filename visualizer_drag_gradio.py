@@ -36,6 +36,18 @@ if is_openxlab:
     download(model_repo='mmagic/DragGAN',
              model_name='DragGAN-Cat',
              output=cache_dir)
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Dogs',
+             output=cache_dir)
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Elephants',
+             output=cache_dir)
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Horses',
+             output=cache_dir)
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Lions',
+             output=cache_dir)
 else:
     cache_dir = args.cache_dir
 
@@ -880,6 +892,5 @@ with gr.Blocks() as app:
     )
 
 gr.close_all()
-app.queue()
-app.queue(concurrency_count=10, max_size=20)
-app.launch(share=args.share)
+app.queue(concurrency_count=2)
+app.launch(share=args.share, server_name='0.0.0.0')

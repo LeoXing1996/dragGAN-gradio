@@ -145,7 +145,7 @@ class Renderer:
         if isinstance(data, CapturedException):
             raise data
 
-        orig_net = data[key]
+        orig_net = data[key]  # this is a state dict
         cache_key = (orig_net, self._device, tuple(sorted(tweak_kwargs.items())))
         net = self._networks.get(cache_key, None)
         if net is None:
@@ -169,7 +169,7 @@ class Renderer:
                 net.to(self._device)
             except:
                 net = CapturedException()
-            self._networks[cache_key] = net
+            # self._networks[cache_key] = net  # --> do not cache
             self._ignore_timing()
         if isinstance(net, CapturedException):
             raise net
@@ -218,6 +218,10 @@ class Renderer:
         ):
         # Dig up network details.
         self.pkl = pkl
+        if hasattr(self, 'G'):
+            del self.G
+            torch.cuda.empty_cache()
+
         G = self.get_network(pkl, 'G_ema')
         self.G = G
         res.img_resolution = G.img_resolution
