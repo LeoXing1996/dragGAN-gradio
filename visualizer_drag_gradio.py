@@ -30,35 +30,26 @@ args = parser.parse_args()
 # cache_dir = args.cache_dir
 
 if is_openxlab:
-    cache_dir = '/home/xlab-app-center/cache'
+    cache_dir = '/home/xlab-app-center/.cache'
     os.makedirs(cache_dir, exist_ok=True)
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Human',
-             output=cache_dir)
+             model_name='DragGAN-Human')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Dogs',
-             output=cache_dir)
+             model_name='DragGAN-Dogs')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Elephants',
-             output=cache_dir)
+             model_name='DragGAN-Elephants')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Horse',
-             output=cache_dir)
+             model_name='DragGAN-Horse')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Lions',
-             output=cache_dir)
+             model_name='DragGAN-Lions')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Cats',
-             output=cache_dir)
+             model_name='DragGAN-Cats')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Car-f',
-             output=cache_dir)
+             model_name='DragGAN-Car-f')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-Cat-f',
-             output=cache_dir)
+             model_name='DragGAN-Cat-f')
     download(model_repo='mmagic/DragGAN',
-             model_name='DragGAN-FFHQ',
-             output=cache_dir)
+             model_name='DragGAN-FFHQ')
 else:
     cache_dir = args.cache_dir
 
@@ -360,8 +351,8 @@ with gr.Blocks() as app:
                 form_image = ImageMask(
                     value=global_state.value['images']['image_show'],
                     brush_radius=20).style(
-                        width=512,
-                        height=512)  # NOTE: hard image size code here.
+                        width=1024,
+                        height=1024)  # NOTE: hard image size code here.
 
             # Right --> Instruction
             # with gr.Column(scale=2):
