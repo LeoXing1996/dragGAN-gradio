@@ -188,7 +188,7 @@ print(os.listdir(cache_dir))
 print('Valid checkpoint file:')
 print(valid_checkpoints_dict)
 
-init_pkl = 'stylegan_human_v2_512'
+init_pkl = 'stylegan2_lions_512_pytorch'
 
 with gr.Blocks() as app:
 
