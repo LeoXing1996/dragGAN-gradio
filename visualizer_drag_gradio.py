@@ -22,6 +22,8 @@ except Exception:
 
 parser = ArgumentParser()
 parser.add_argument('--share', action='store_true')
+parser.add_argument('--host', type=str)
+parser.add_argument('--port', type=int)
 parser.add_argument('--cache-dir', type=str, default='./checkpoints')
 args = parser.parse_args()
 
@@ -892,5 +894,5 @@ with gr.Blocks() as app:
     )
 
 gr.close_all()
-app.queue(concurrency_count=2)
-app.launch(share=args.share, server_name='0.0.0.0')
+app.queue(concurrency_count=10, max_size=20)
+app.launch(share=args.share, server_name=args.host, server_port=args.port)
