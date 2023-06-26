@@ -231,6 +231,19 @@ with gr.Blocks() as app:
     # init image
     global_state = init_images(global_state)
 
+    # Header~
+    with gr.Row():
+        gr.HTML("""
+            <h1 align="center">The Official Implementation of </h1>
+            <h1 align="center"><a href="https://github.com/XingangPan/DragGAN">"Drag Your GAN: Interactive Point-based Manipulation on the Generative Image Manifold"</a></h1>
+            <br>
+            """)
+
+    # with gr.Row():
+    #     gr.Markdown("""
+    #         * Official GitHub Repo: [DragGAN](https://github.com/XingangPan/DragGAN)
+    #         """)
+
     with gr.Row():
 
         with gr.Row():
@@ -329,49 +342,36 @@ with gr.Blocks() as app:
                     interactive=True,
                     visible=False)
 
-            # Right --> Image
+            # Mid --> Image
             with gr.Column(scale=8):
                 form_image = ImageMask(
                     value=global_state.value['images']['image_show'],
                     brush_radius=20).style(
                         width=768,
                         height=768)  # NOTE: hard image size code here.
-    gr.Markdown("""
-        ## Quick Start
 
-        1. Select desired `Pretrained Model` and adjust `Seed` to generate an
-           initial image.
-        2. Click on image to add control points.
-        3. Click `Start` and enjoy it!
+            # Right --> Instruction
+            with gr.Column(scale=2):
+                gr.Markdown("""
+                    ## Quick Start
 
-        ## Advance Usage
+                    1. Select desired `Pretrained Model` and adjust `Seed` to generate an
+                    initial image.
+                    2. Click on image to add control points.
+                    3. Click `Start` and enjoy it!
 
-        1. Change `Step Size` to adjust learning rate in drag optimization.
-        2. Select `w` or `w+` to change latent space to optimize:
-        * Optimize on `w` space may cause greater influence to the image.
-        * Optimize on `w+` space may work slower than `w`, but usually achieve
-          better results.
-        * Note that changing the latent space will reset the image, points and
-          mask (this has the same effect as `Reset Image` button).
-        3. Click `Edit Flexible Area` to create a mask and constrain the
-           unmasked region to remain unchanged.
-        """)
-    gr.HTML("""
-        <style>
-            .container {
-                position: absolute;
-                height: 50px;
-                text-align: center;
-                line-height: 50px;
-                width: 100%;
-            }
-        </style>
-        <div class="container">
-        Gradio demo supported by
-        <img src="https://avatars.githubusercontent.com/u/10245193?s=200&v=4" height="20" width="20" style="display:inline;">
-        <a href="https://github.com/open-mmlab/mmagic">OpenMMLab MMagic</a>
-        </div>
-        """)
+                    ## Advance Usage
+
+                    1. Change `Step Size` to adjust learning rate in drag optimization.
+                    2. Select `w` or `w+` to change latent space to optimize:
+                    * Optimize on `w` space may cause greater influence to the image.
+                    * Optimize on `w+` space may work slower than `w`, but usually achieve
+                    better results.
+                    * Note that changing the latent space will reset the image, points and
+                    mask (this has the same effect as `Reset Image` button).
+                    3. Click `Edit Flexible Area` to create a mask and constrain the
+                    unmasked region to remain unchanged.
+                    """)
 
     # Network & latents tab listeners
     def on_change_pretrained_dropdown(pretrained_value, global_state):
@@ -479,7 +479,8 @@ with gr.Blocks() as app:
         global_state = preprocess_mask_info(global_state, image)
 
         # Prepare the points for the inference
-        if len(global_state["points"]) == 0:
+        if (len(global_state["points"]) == 0
+                or 'target' not in global_state['points'][0]):
             # yield on_click_start_wo_points(global_state, image)
             image_raw = global_state['images']['image_raw']
             update_image_draw(
