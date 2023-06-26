@@ -242,8 +242,12 @@ with gr.Blocks() as app:
 
     # Header~
     with gr.Row():
+        # gr.HTML("""
+        #     <h1 align="center">The Official Implementation of </h1>
+        #     <h1 align="center"><a href="https://github.com/XingangPan/DragGAN">"Drag Your GAN: Interactive Point-based Manipulation on the Generative Image Manifold"</a></h1>
+        #     <br>
+        #     """)
         gr.HTML("""
-            <h1 align="center">The Official Implementation of </h1>
             <h1 align="center"><a href="https://github.com/XingangPan/DragGAN">"Drag Your GAN: Interactive Point-based Manipulation on the Generative Image Manifold"</a></h1>
             <br>
             """)
@@ -356,8 +360,8 @@ with gr.Blocks() as app:
                 form_image = ImageMask(
                     value=global_state.value['images']['image_show'],
                     brush_radius=20).style(
-                        width=768,
-                        height=768)  # NOTE: hard image size code here.
+                        width=512,
+                        height=512)  # NOTE: hard image size code here.
 
             # Right --> Instruction
             # with gr.Column(scale=2):
