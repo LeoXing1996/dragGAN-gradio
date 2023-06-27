@@ -20,6 +20,8 @@ try:
 except Exception:
     is_openxlab = False
 
+torch.backends.cudnn.enabled=False
+
 parser = ArgumentParser()
 parser.add_argument('--share', action='store_true')
 parser.add_argument('--host', type=str)
@@ -909,5 +911,5 @@ with gr.Blocks() as app:
     )
 
 gr.close_all()
-app.queue(concurrency_count=5, max_size=10)
+app.queue(concurrency_count=3, max_size=10)
 app.launch(share=args.share, server_name=args.host, server_port=args.port)
