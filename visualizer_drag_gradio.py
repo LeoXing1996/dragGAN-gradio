@@ -20,7 +20,8 @@ try:
 except Exception:
     is_openxlab = False
 
-torch.backends.cudnn.enabled=False
+torch.backends.cudnn.enabled = False
+MAX_STEP = 500
 
 parser = ArgumentParser()
 parser.add_argument('--share', action='store_true')
@@ -567,6 +568,9 @@ with gr.Blocks() as app:
             step_idx = 0
             while True:
                 if global_state["temporal_params"]["stop"]:
+                    break
+                if step_idx > MAX_STEP:
+                    print(f'Reach Max Step ({MAX_STEP}), Stop!')
                     break
 
                 # do drage here!
