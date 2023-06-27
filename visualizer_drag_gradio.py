@@ -21,15 +21,19 @@ except Exception:
     is_openxlab = False
 
 torch.backends.cudnn.enabled = False
-MAX_STEP = 500
 
 parser = ArgumentParser()
 parser.add_argument('--share', action='store_true')
+parser.add_argument('--max-size', type=int, default=50)
+parser.add_argument('--concurrency_count', type=int, default=3)
 parser.add_argument('--host', type=str)
 parser.add_argument('--port', type=int)
+
+parser.add_argument('--max-step', type=int, default=500)
 parser.add_argument('--cache-dir', type=str, default='./checkpoints')
 args = parser.parse_args()
 
+MAX_STEP = args.max_size
 # cache_dir = args.cache_dir
 
 if is_openxlab:
@@ -915,5 +919,6 @@ with gr.Blocks() as app:
     )
 
 gr.close_all()
-app.queue(concurrency_count=3, max_size=10)
+app.queue(concurrency_count=args.concurrency_count,
+          max_size=args.max_size)
 app.launch(share=args.share, server_name=args.host, server_port=args.port)
