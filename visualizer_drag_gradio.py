@@ -33,7 +33,7 @@ parser.add_argument('--max-step', type=int, default=500)
 parser.add_argument('--cache-dir', type=str, default='./checkpoints')
 args = parser.parse_args()
 
-MAX_STEP = args.max_size
+MAX_STEP = args.max_step
 # cache_dir = args.cache_dir
 
 if is_openxlab:
