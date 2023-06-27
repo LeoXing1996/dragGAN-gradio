@@ -296,95 +296,101 @@ class Renderer:
         to_pil          = False,
         **kwargs
     ):
-        G = self.G
-        ws = self.w
-        if ws.dim() == 2:
-            ws = ws.unsqueeze(1).repeat(1,6,1)
-        ws = torch.cat([ws[:,:6,:], self.w0[:,6:,:]], dim=1)
-        if hasattr(self, 'points'):
-            if len(points) != len(self.points):
-                reset = True
-        if reset:
-            self.feat_refs = None
-            self.points0_pt = None
-        self.points = points
+        try:
+            G = self.G
+            ws = self.w
+            if ws.dim() == 2:
+                ws = ws.unsqueeze(1).repeat(1,6,1)
+            ws = torch.cat([ws[:,:6,:], self.w0[:,6:,:]], dim=1)
+            if hasattr(self, 'points'):
+                if len(points) != len(self.points):
+                    reset = True
+            if reset:
+                self.feat_refs = None
+                self.points0_pt = None
+            self.points = points
 
-        # Run synthesis network.
-        label = torch.zeros([1, G.c_dim], device=self._device)
-        img, feat = G(ws, label, truncation_psi=trunc_psi, noise_mode=noise_mode, input_is_w=True, return_feature=True)
+            # Run synthesis network.
+            label = torch.zeros([1, G.c_dim], device=self._device)
+            img, feat = G(ws, label, truncation_psi=trunc_psi, noise_mode=noise_mode, input_is_w=True, return_feature=True)
 
-        h, w = G.img_resolution, G.img_resolution
+            h, w = G.img_resolution, G.img_resolution
 
-        if is_drag:
-            X = torch.linspace(0, h, h)
-            Y = torch.linspace(0, w, w)
-            xx, yy = torch.meshgrid(X, Y)
-            feat_resize = F.interpolate(feat[feature_idx], [h, w], mode='bilinear')
-            if self.feat_refs is None:
-                self.feat0_resize = F.interpolate(feat[feature_idx].detach(), [h, w], mode='bilinear')
-                self.feat_refs = []
-                for point in points:
-                    py, px = round(point[0]), round(point[1])
-                    self.feat_refs.append(self.feat0_resize[:,:,py,px])
-                self.points0_pt = torch.Tensor(points).unsqueeze(0).to(self._device) # 1, N, 2
+            if is_drag:
+                X = torch.linspace(0, h, h)
+                Y = torch.linspace(0, w, w)
+                xx, yy = torch.meshgrid(X, Y)
+                feat_resize = F.interpolate(feat[feature_idx], [h, w], mode='bilinear')
+                if self.feat_refs is None:
+                    self.feat0_resize = F.interpolate(feat[feature_idx].detach(), [h, w], mode='bilinear')
+                    self.feat_refs = []
+                    for point in points:
+                        py, px = round(point[0]), round(point[1])
+                        self.feat_refs.append(self.feat0_resize[:,:,py,px])
+                    self.points0_pt = torch.Tensor(points).unsqueeze(0).to(self._device) # 1, N, 2
 
-            # Point tracking with feature matching
-            with torch.no_grad():
+                # Point tracking with feature matching
+                with torch.no_grad():
+                    for j, point in enumerate(points):
+                        r = round(r2 / 512 * h)
+                        up = max(point[0] - r, 0)
+                        down = min(point[0] + r + 1, h)
+                        left = max(point[1] - r, 0)
+                        right = min(point[1] + r + 1, w)
+                        feat_patch = feat_resize[:,:,up:down,left:right]
+                        L2 = torch.linalg.norm(feat_patch - self.feat_refs[j].reshape(1,-1,1,1), dim=1)
+                        _, idx = torch.min(L2.view(1,-1), -1)
+                        width = right - left
+                        point = [idx.item() // width + up, idx.item() % width + left]
+                        points[j] = point
+
+                res.points = [[point[0], point[1]] for point in points]
+
+                # Motion supervision
+                loss_motion = 0
+                res.stop = True
                 for j, point in enumerate(points):
-                    r = round(r2 / 512 * h)
-                    up = max(point[0] - r, 0)
-                    down = min(point[0] + r + 1, h)
-                    left = max(point[1] - r, 0)
-                    right = min(point[1] + r + 1, w)
-                    feat_patch = feat_resize[:,:,up:down,left:right]
-                    L2 = torch.linalg.norm(feat_patch - self.feat_refs[j].reshape(1,-1,1,1), dim=1)
-                    _, idx = torch.min(L2.view(1,-1), -1)
-                    width = right - left
-                    point = [idx.item() // width + up, idx.item() % width + left]
-                    points[j] = point
+                    direction = torch.Tensor([targets[j][1] - point[1], targets[j][0] - point[0]])
+                    if torch.linalg.norm(direction) > max(2 / 512 * h, 2):
+                        res.stop = False
+                    if torch.linalg.norm(direction) > 1:
+                        distance = ((xx.to(self._device) - point[0])**2 + (yy.to(self._device) - point[1])**2)**0.5
+                        relis, reljs = torch.where(distance < round(r1 / 512 * h))
+                        direction = direction / (torch.linalg.norm(direction) + 1e-7)
+                        gridh = (relis-direction[1]) / (h-1) * 2 - 1
+                        gridw = (reljs-direction[0]) / (w-1) * 2 - 1
+                        grid = torch.stack([gridw,gridh], dim=-1).unsqueeze(0).unsqueeze(0)
+                        target = F.grid_sample(feat_resize.float(), grid, align_corners=True).squeeze(2)
+                        loss_motion += F.l1_loss(feat_resize[:,:,relis,reljs], target.detach())
 
-            res.points = [[point[0], point[1]] for point in points]
+                loss = loss_motion
+                if mask is not None:
+                    if mask.min() == 0 and mask.max() == 1:
+                        mask_usq = mask.to(self._device).unsqueeze(0).unsqueeze(0)
+                        loss_fix = F.l1_loss(feat_resize * mask_usq, self.feat0_resize * mask_usq)
+                        loss += lambda_mask * loss_fix
 
-            # Motion supervision
-            loss_motion = 0
-            res.stop = True
-            for j, point in enumerate(points):
-                direction = torch.Tensor([targets[j][1] - point[1], targets[j][0] - point[0]])
-                if torch.linalg.norm(direction) > max(2 / 512 * h, 2):
-                    res.stop = False
-                if torch.linalg.norm(direction) > 1:
-                    distance = ((xx.to(self._device) - point[0])**2 + (yy.to(self._device) - point[1])**2)**0.5
-                    relis, reljs = torch.where(distance < round(r1 / 512 * h))
-                    direction = direction / (torch.linalg.norm(direction) + 1e-7)
-                    gridh = (relis-direction[1]) / (h-1) * 2 - 1
-                    gridw = (reljs-direction[0]) / (w-1) * 2 - 1
-                    grid = torch.stack([gridw,gridh], dim=-1).unsqueeze(0).unsqueeze(0)
-                    target = F.grid_sample(feat_resize.float(), grid, align_corners=True).squeeze(2)
-                    loss_motion += F.l1_loss(feat_resize[:,:,relis,reljs], target.detach())
+                loss += reg * F.l1_loss(ws, self.w0)  # latent code regularization
+                if not res.stop:
+                    self.w_optim.zero_grad()
+                    loss.backward()
+                    self.w_optim.step()
 
-            loss = loss_motion
-            if mask is not None:
-                if mask.min() == 0 and mask.max() == 1:
-                    mask_usq = mask.to(self._device).unsqueeze(0).unsqueeze(0)
-                    loss_fix = F.l1_loss(feat_resize * mask_usq, self.feat0_resize * mask_usq)
-                    loss += lambda_mask * loss_fix
+            # Scale and convert to uint8.
+            img = img[0]
+            if img_normalize:
+                img = img / img.norm(float('inf'), dim=[1,2], keepdim=True).clip(1e-8, 1e8)
+            img = img * (10 ** (img_scale_db / 20))
+            img = (img * 127.5 + 128).clamp(0, 255).to(torch.uint8).permute(1, 2, 0)
+            if to_pil:
+                from PIL import Image
+                img = img.cpu().numpy()
+                img = Image.fromarray(img)
+            res.image = img
 
-            loss += reg * F.l1_loss(ws, self.w0)  # latent code regularization
-            if not res.stop:
-                self.w_optim.zero_grad()
-                loss.backward()
-                self.w_optim.step()
-
-        # Scale and convert to uint8.
-        img = img[0]
-        if img_normalize:
-            img = img / img.norm(float('inf'), dim=[1,2], keepdim=True).clip(1e-8, 1e8)
-        img = img * (10 ** (img_scale_db / 20))
-        img = (img * 127.5 + 128).clamp(0, 255).to(torch.uint8).permute(1, 2, 0)
-        if to_pil:
-            from PIL import Image
-            img = img.cpu().numpy()
-            img = Image.fromarray(img)
-        res.image = img
+        except Exception as e:
+            import os
+            print(f'Render error: {e}')
+            os._exit(0)
 
 #----------------------------------------------------------------------------
