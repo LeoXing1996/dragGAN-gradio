@@ -630,6 +630,11 @@ with gr.Blocks() as app:
                 print_log(f'Drag step {step_idx}, end, time cost: '
                           f'{end_time-start_time}', uid)
 
+                _should_stop = global_state['generator_params']['stop']
+                if _should_stop:
+                    print_log('Optimization Finish. Stop Drag.', uid)
+                    break
+
                 if step_idx % global_state['draw_interval'] == 0:
                     # print_log('Current Source:')
                     for key_point, p_i, t_i in zip(valid_points, p_to_opt,
