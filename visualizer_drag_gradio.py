@@ -1,5 +1,7 @@
 import os
 import os.path as osp
+import time
+import uuid
 from argparse import ArgumentParser
 from functools import partial
 
@@ -35,12 +37,20 @@ parser.add_argument('--max-step', type=int, default=500)
 parser.add_argument('--cache-dir', type=str, default='./checkpoints')
 
 parser.add_argument('--queue', action='store_true')
+parser.add_argument('--log-level', choices=['debug', 'info'])
 
 args = parser.parse_args()
 
 MAX_STEP = args.max_step
 enable_queue = args.queue
+LOG_LEVEL = args.log_level
 # cache_dir = args.cache_dir
+
+
+def get_curr_time():
+    # return int(round(time.time()) * 1000)
+    return time.time() * 1000
+
 
 if is_openxlab:
     cache_dir = '/home/xlab-app-center/.cache/model'
@@ -88,12 +98,12 @@ def clear_state(global_state, target=None):
         target = [target]
     if 'point' in target:
         global_state['points'] = dict()
-        print('Clear Points State!')
+        print_log('Clear Points State!')
     if 'mask' in target:
         image_raw = global_state["images"]["image_raw"]
         global_state['mask'] = np.ones((image_raw.size[1], image_raw.size[0]),
                                        dtype=np.uint8)
-        print('Clear mask State!')
+        print_log('Clear mask State!')
 
     return global_state
 
@@ -177,14 +187,14 @@ def preprocess_mask_info(global_state, image):
 
     if editing_mode == 'remove_mask':
         updated_mask = np.clip(mask - last_mask, 0, 1)
-        print(f'Last editing_state is {editing_mode}, do remove.')
+        print_log(f'Last editing_state is {editing_mode}, do remove.')
     elif editing_mode == 'add_mask':
         updated_mask = np.clip(mask + last_mask, 0, 1)
-        print(f'Last editing_state is {editing_mode}, do add.')
+        print_log(f'Last editing_state is {editing_mode}, do add.')
     else:
         updated_mask = mask
-        print(f'Last editing_state is {editing_mode}, '
-              'do nothing to mask.')
+        print_log(f'Last editing_state is {editing_mode}, '
+                  'do nothing to mask.')
 
     global_state['mask'] = updated_mask
     # global_state['last_mask'] = None  # clear buffer
@@ -204,6 +214,14 @@ print(valid_checkpoints_dict)
 init_pkl = 'stylegan2_lions_512_pytorch'
 
 with gr.Blocks() as app:
+
+    def print_log(cont, uid=None):
+        prefix_list = []
+        if uid is not None:
+            prefix_list.append(f'[{uid}]')
+        prefix_list.append(f'[{get_curr_time()}]')
+        prefix = ''.join(prefix_list)
+        print(f'{prefix} {cont}')
 
     # renderer = Renderer()
     global_state = gr.State({
@@ -364,7 +382,8 @@ with gr.Blocks() as app:
                 form_image = ImageMask(
                     value=global_state.value['images']['image_show'],
                     brush_radius=20).style(
-                        width=768, height=768)  # NOTE: hard image size code here.
+                        width=768,
+                        height=768)  # NOTE: hard image size code here.
 
             # Right --> Instruction
             # with gr.Column(scale=2):
@@ -418,10 +437,9 @@ with gr.Blocks() as app:
 
         return global_state, global_state['images']['image_show']
 
-    form_reset_image.click(
-        on_click_reset_image,
-        inputs=[global_state],
-        outputs=[global_state, form_image])
+    form_reset_image.click(on_click_reset_image,
+                           inputs=[global_state],
+                           outputs=[global_state, form_image])
 
     # Update parameters
     def on_change_update_image_seed(seed, global_state):
@@ -436,10 +454,9 @@ with gr.Blocks() as app:
 
         return global_state, global_state['images']['image_show']
 
-    form_seed_number.change(
-        on_change_update_image_seed,
-        inputs=[form_seed_number, global_state],
-        outputs=[global_state, form_image])
+    form_seed_number.change(on_change_update_image_seed,
+                            inputs=[form_seed_number, global_state],
+                            outputs=[global_state, form_image])
 
     def on_click_latent_space(latent_space, global_state):
         """Function to reset latent space to optimize.
@@ -459,31 +476,33 @@ with gr.Blocks() as app:
                              outputs=[global_state, form_image])
 
     # ==== Params
-    form_lambda_number.change(
-        partial(on_change_single_global_state, ["params", "motion_lambda"]),
-        inputs=[form_lambda_number, global_state],
-        outputs=[global_state],
-        queue=enable_queue)
+    form_lambda_number.change(partial(on_change_single_global_state,
+                                      ["params", "motion_lambda"]),
+                              inputs=[form_lambda_number, global_state],
+                              outputs=[global_state],
+                              queue=enable_queue)
 
     def on_change_lr(lr, global_state):
         if lr == 0:
-            print('lr is 0, do nothing.')
+            print_log('lr is 0, do nothing.')
             return global_state
         else:
             global_state["params"]["lr"] = lr
             renderer = global_state['renderer']
             renderer.update_lr(lr)
-            print('New optimizer: ')
-            print(renderer.w_optim)
+            print_log('New optimizer: ')
+            print_log(renderer.w_optim)
         return global_state
 
-    form_lr_number.change(
-        on_change_lr,
-        inputs=[form_lr_number, global_state],
-        outputs=[global_state],
-        queue=enable_queue)
+    form_lr_number.change(on_change_lr,
+                          inputs=[form_lr_number, global_state],
+                          outputs=[global_state],
+                          queue=enable_queue)
 
     def on_click_start(global_state, image):
+
+        uid = str(uuid.uuid4()).split('-')[-1]
+
         p_in_pixels = []
         t_in_pixels = []
         valid_points = []
@@ -569,18 +588,21 @@ with gr.Blocks() as app:
             # reverse points order
             p_to_opt = reverse_point_pairs(p_in_pixels)
             t_to_opt = reverse_point_pairs(t_in_pixels)
-            print('Running with:')
-            print(f'    Source: {p_in_pixels}')
-            print(f'    Target: {t_in_pixels}')
+            print_log('Running with:')
+            print_log(f'    Source: {p_in_pixels}')
+            print_log(f'    Target: {t_in_pixels}')
             step_idx = 0
             while True:
                 if global_state["temporal_params"]["stop"]:
+                    print_log('Stop Drag by STOP.', uid)
                     break
                 if step_idx > MAX_STEP:
-                    print(f'Reach Max Step ({MAX_STEP}), Stop!')
+                    print_log(f'Reach Max Step ({MAX_STEP}), Stop!', uid)
                     break
 
                 # do drage here!
+                start_time = get_curr_time()
+                print_log(f'Drag step {step_idx}, start', uid)
                 renderer._render_drag_impl(
                     global_state['generator_params'],
                     p_to_opt,  # point
@@ -603,9 +625,13 @@ with gr.Blocks() as app:
                     # untransform     = False,
                     is_drag=True,
                     to_pil=True)
+                end_time = get_curr_time()
+
+                print_log(f'Drag step {step_idx}, end, time cost: '
+                          f'{end_time-start_time}', uid)
 
                 if step_idx % global_state['draw_interval'] == 0:
-                    print('Current Source:')
+                    # print_log('Current Source:')
                     for key_point, p_i, t_i in zip(valid_points, p_to_opt,
                                                    t_to_opt):
                         global_state["points"][key_point]["start_temp"] = [
@@ -616,9 +642,9 @@ with gr.Blocks() as app:
                             t_i[1],
                             t_i[0],
                         ]
-                        start_temp = global_state["points"][key_point][
-                            "start_temp"]
-                        print(f'    {start_temp}')
+                        # start_temp = global_state["points"][key_point][
+                        #     "start_temp"]
+                        # print_log(f'    {start_temp}')
 
                     image_result = global_state['generator_params']['image']
                     image_draw = update_image_draw(
@@ -777,11 +803,10 @@ with gr.Blocks() as app:
                                        global_state['show_mask'], global_state)
         return global_state, image_draw
 
-    form_reset_mask_btn.click(
-        on_click_reset_mask,
-        inputs=[global_state],
-        outputs=[global_state, form_image],
-        queue=enable_queue)
+    form_reset_mask_btn.click(on_click_reset_mask,
+                              inputs=[global_state],
+                              outputs=[global_state, form_image],
+                              queue=enable_queue)
 
     # Image
     def on_click_enable_draw(global_state, image):
@@ -819,7 +844,8 @@ with gr.Blocks() as app:
                           outputs=[
                               global_state,
                               form_image,
-                          ], queue=enable_queue)
+                          ],
+                          queue=enable_queue)
 
     def on_click_add_point(global_state, image: dict):
         """Function switch from add mask mode to add points mode.
@@ -848,8 +874,8 @@ with gr.Blocks() as app:
         """
         xy = evt.index
         if global_state['editing_state'] != 'add_points':
-            print(f'In {global_state["editing_state"]} state. '
-                  'Do not add points.')
+            print_log(f'In {global_state["editing_state"]} state. '
+                      'Do not add points.')
 
             return global_state, global_state['images']['image_show']
 
@@ -858,13 +884,13 @@ with gr.Blocks() as app:
         point_idx = get_latest_points_pair(points)
         if point_idx is None:
             points[0] = {'start': xy, 'target': None}
-            print(f'Click Image - Start - {xy}')
+            print_log(f'Click Image - Start - {xy}')
         elif points[point_idx].get('target', None) is None:
             points[point_idx]['target'] = xy
-            print(f'Click Image - Target - {xy}')
+            print_log(f'Click Image - Target - {xy}')
         else:
             points[point_idx + 1] = {'start': xy, 'target': None}
-            print(f'Click Image - Start - {xy}')
+            print_log(f'Click Image - Start - {xy}')
 
         image_raw = global_state['images']['image_raw']
         image_draw = update_image_draw(
@@ -877,11 +903,10 @@ with gr.Blocks() as app:
 
         return global_state, image_draw
 
-    form_image.select(
-        on_click_image,
-        inputs=[global_state],
-        outputs=[global_state, form_image],
-        queue=enable_queue)
+    form_image.select(on_click_image,
+                      inputs=[global_state],
+                      outputs=[global_state, form_image],
+                      queue=enable_queue)
 
     def on_click_clear_points(global_state):
         """Function to handle clear all control points
@@ -918,13 +943,11 @@ with gr.Blocks() as app:
         )
         return global_state, image_draw
 
-    show_mask.change(
-        on_click_show_mask,
-        inputs=[global_state, show_mask],
-        outputs=[global_state, form_image],
-        queue=enable_queue)
+    show_mask.change(on_click_show_mask,
+                     inputs=[global_state, show_mask],
+                     outputs=[global_state, form_image],
+                     queue=enable_queue)
 
 gr.close_all()
-app.queue(concurrency_count=args.concurrency_count,
-          max_size=args.max_size)
+app.queue(concurrency_count=args.concurrency_count, max_size=args.max_size)
 app.launch(share=args.share, server_name=args.host, server_port=args.port)
