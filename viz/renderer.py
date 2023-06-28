@@ -351,9 +351,8 @@ class Renderer:
                 res.stop = True
                 for j, point in enumerate(points):
                     direction = torch.Tensor([targets[j][1] - point[1], targets[j][0] - point[0]])
-                    # if torch.linalg.norm(direction) > max(2 / 512 * h, 2):
-                    # NOTE: change threshold to 5
-                    if torch.linalg.norm(direction) > max(5 / 512 * h, 5):
+                    # if torch.linalg.norm(direction) > max(5 / 512 * h, 5):
+                    if torch.linalg.norm(direction) > max(2 / 512 * h, 2):
                         res.stop = False
                     if torch.linalg.norm(direction) > 1:
                         distance = ((xx.to(self._device) - point[0])**2 + (yy.to(self._device) - point[1])**2)**0.5
