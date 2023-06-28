@@ -24,16 +24,22 @@ torch.backends.cudnn.enabled = False
 
 parser = ArgumentParser()
 parser.add_argument('--share', action='store_true')
+
 parser.add_argument('--max-size', type=int, default=50)
-parser.add_argument('--concurrency_count', type=int, default=3)
+parser.add_argument('--concurrency-count', type=int, default=3)
+
 parser.add_argument('--host', type=str)
 parser.add_argument('--port', type=int)
 
 parser.add_argument('--max-step', type=int, default=500)
 parser.add_argument('--cache-dir', type=str, default='./checkpoints')
+
+parser.add_argument('--queue', action='store_true')
+
 args = parser.parse_args()
 
 MAX_STEP = args.max_step
+enable_queue = args.queue
 # cache_dir = args.cache_dir
 
 if is_openxlab:
@@ -457,8 +463,7 @@ with gr.Blocks() as app:
         partial(on_change_single_global_state, ["params", "motion_lambda"]),
         inputs=[form_lambda_number, global_state],
         outputs=[global_state],
-        queue=False,
-    )
+        queue=enable_queue)
 
     def on_change_lr(lr, global_state):
         if lr == 0:
@@ -476,8 +481,7 @@ with gr.Blocks() as app:
         on_change_lr,
         inputs=[form_lr_number, global_state],
         outputs=[global_state],
-        queue=False,
-    )
+        queue=enable_queue)
 
     def on_click_start(global_state, image):
         p_in_pixels = []
@@ -732,7 +736,7 @@ with gr.Blocks() as app:
     form_stop_btn.click(on_click_stop,
                         inputs=[global_state],
                         outputs=[global_state, form_stop_btn],
-                        queue=False)
+                        queue=enable_queue)
 
     form_draw_interval_number.change(
         partial(
@@ -777,8 +781,7 @@ with gr.Blocks() as app:
         on_click_reset_mask,
         inputs=[global_state],
         outputs=[global_state, form_image],
-        queue=False,
-    )
+        queue=enable_queue)
 
     # Image
     def on_click_enable_draw(global_state, image):
@@ -816,7 +819,7 @@ with gr.Blocks() as app:
                           outputs=[
                               global_state,
                               form_image,
-                          ], queue=False)
+                          ], queue=enable_queue)
 
     def on_click_add_point(global_state, image: dict):
         """Function switch from add mask mode to add points mode.
@@ -838,7 +841,7 @@ with gr.Blocks() as app:
     enable_add_points.click(on_click_add_point,
                             inputs=[global_state, form_image],
                             outputs=[global_state, form_image],
-                            queue=False)
+                            queue=enable_queue)
 
     def on_click_image(global_state, evt: gr.SelectData):
         """This function only support click for point selection
@@ -878,7 +881,7 @@ with gr.Blocks() as app:
         on_click_image,
         inputs=[global_state],
         outputs=[global_state, form_image],
-        queue=False)
+        queue=enable_queue)
 
     def on_click_clear_points(global_state):
         """Function to handle clear all control points
@@ -899,7 +902,7 @@ with gr.Blocks() as app:
     undo_points.click(on_click_clear_points,
                       inputs=[global_state],
                       outputs=[global_state, form_image],
-                      queue=False)
+                      queue=enable_queue)
 
     def on_click_show_mask(global_state, show_mask):
         """Function to control whether show mask on image."""
@@ -919,8 +922,7 @@ with gr.Blocks() as app:
         on_click_show_mask,
         inputs=[global_state, show_mask],
         outputs=[global_state, form_image],
-        queue=False,
-    )
+        queue=enable_queue)
 
 gr.close_all()
 app.queue(concurrency_count=args.concurrency_count,
