@@ -400,6 +400,7 @@ with gr.Blocks() as app:
         on_change_pretrained_dropdown,
         inputs=[form_pretrained_dropdown, global_state],
         outputs=[global_state, form_image],
+        queue=False,
     )
 
     def on_click_reset_image(global_state):
@@ -417,6 +418,7 @@ with gr.Blocks() as app:
         on_click_reset_image,
         inputs=[global_state],
         outputs=[global_state, form_image],
+        queue=False,
     )
 
     # Update parameters
@@ -436,6 +438,7 @@ with gr.Blocks() as app:
         on_change_update_image_seed,
         inputs=[form_seed_number, global_state],
         outputs=[global_state, form_image],
+        queue=False,
     )
 
     def on_click_latent_space(latent_space, global_state):
@@ -453,13 +456,15 @@ with gr.Blocks() as app:
 
     form_latent_space.change(on_click_latent_space,
                              inputs=[form_latent_space, global_state],
-                             outputs=[global_state, form_image])
+                             outputs=[global_state, form_image],
+                             queue=False)
 
     # ==== Params
     form_lambda_number.change(
         partial(on_change_single_global_state, ["params", "motion_lambda"]),
         inputs=[form_lambda_number, global_state],
         outputs=[global_state],
+        queue=False,
     )
 
     def on_change_lr(lr, global_state):
@@ -478,6 +483,7 @@ with gr.Blocks() as app:
         on_change_lr,
         inputs=[form_lr_number, global_state],
         outputs=[global_state],
+        queue=False,
     )
 
     def on_click_start(global_state, image):
@@ -732,7 +738,8 @@ with gr.Blocks() as app:
 
     form_stop_btn.click(on_click_stop,
                         inputs=[global_state],
-                        outputs=[global_state, form_stop_btn])
+                        outputs=[global_state, form_stop_btn],
+                        queue=False)
 
     form_draw_interval_number.change(
         partial(
@@ -777,6 +784,7 @@ with gr.Blocks() as app:
         on_click_reset_mask,
         inputs=[global_state],
         outputs=[global_state, form_image],
+        queue=False,
     )
 
     # Image
@@ -815,7 +823,7 @@ with gr.Blocks() as app:
                           outputs=[
                               global_state,
                               form_image,
-                          ])
+                          ], queue=False)
 
     def on_click_add_point(global_state, image: dict):
         """Function switch from add mask mode to add points mode.
@@ -836,7 +844,8 @@ with gr.Blocks() as app:
 
     enable_add_points.click(on_click_add_point,
                             inputs=[global_state, form_image],
-                            outputs=[global_state, form_image])
+                            outputs=[global_state, form_image],
+                            queue=False)
 
     def on_click_image(global_state, evt: gr.SelectData):
         """This function only support click for point selection
@@ -876,7 +885,7 @@ with gr.Blocks() as app:
         on_click_image,
         inputs=[global_state],
         outputs=[global_state, form_image],
-    )
+        queue=False)
 
     def on_click_clear_points(global_state):
         """Function to handle clear all control points
@@ -896,7 +905,8 @@ with gr.Blocks() as app:
 
     undo_points.click(on_click_clear_points,
                       inputs=[global_state],
-                      outputs=[global_state, form_image])
+                      outputs=[global_state, form_image],
+                      queue=False)
 
     def on_click_show_mask(global_state, show_mask):
         """Function to control whether show mask on image."""
@@ -916,6 +926,7 @@ with gr.Blocks() as app:
         on_click_show_mask,
         inputs=[global_state, show_mask],
         outputs=[global_state, form_image],
+        queue=False,
     )
 
 gr.close_all()
