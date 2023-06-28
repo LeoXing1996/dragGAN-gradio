@@ -399,9 +399,7 @@ with gr.Blocks() as app:
     form_pretrained_dropdown.change(
         on_change_pretrained_dropdown,
         inputs=[form_pretrained_dropdown, global_state],
-        outputs=[global_state, form_image],
-        queue=False,
-    )
+        outputs=[global_state, form_image])
 
     def on_click_reset_image(global_state):
         """Reset image to the original one and clear all states
@@ -417,9 +415,7 @@ with gr.Blocks() as app:
     form_reset_image.click(
         on_click_reset_image,
         inputs=[global_state],
-        outputs=[global_state, form_image],
-        queue=False,
-    )
+        outputs=[global_state, form_image])
 
     # Update parameters
     def on_change_update_image_seed(seed, global_state):
@@ -437,9 +433,7 @@ with gr.Blocks() as app:
     form_seed_number.change(
         on_change_update_image_seed,
         inputs=[form_seed_number, global_state],
-        outputs=[global_state, form_image],
-        queue=False,
-    )
+        outputs=[global_state, form_image])
 
     def on_click_latent_space(latent_space, global_state):
         """Function to reset latent space to optimize.
@@ -456,8 +450,7 @@ with gr.Blocks() as app:
 
     form_latent_space.change(on_click_latent_space,
                              inputs=[form_latent_space, global_state],
-                             outputs=[global_state, form_image],
-                             queue=False)
+                             outputs=[global_state, form_image])
 
     # ==== Params
     form_lambda_number.change(
