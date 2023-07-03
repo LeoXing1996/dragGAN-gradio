@@ -385,28 +385,28 @@ with gr.Blocks() as app:
                         width=768,
                         height=768)  # NOTE: hard image size code here.
 
-            # Right --> Instruction
-            # with gr.Column(scale=2):
-            #     gr.Markdown("""
-            #         ## Quick Start
+    # Bottom --> Instruction
+    with gr.Row():
+        gr.Markdown("""
+            ## Quick Start
 
-            #         1. Select desired `Pretrained Model` and adjust `Seed` to generate an
-            #         initial image.
-            #         2. Click on image to add control points.
-            #         3. Click `Start` and enjoy it!
+            1. Select desired `Pretrained Model` and adjust `Seed` to generate an
+            initial image.
+            2. Click on image to add control points.
+            3. Click `Start` and enjoy it!
 
-            #         ## Advance Usage
+            ## Advance Usage
 
-            #         1. Change `Step Size` to adjust learning rate in drag optimization.
-            #         2. Select `w` or `w+` to change latent space to optimize:
-            #         * Optimize on `w` space may cause greater influence to the image.
-            #         * Optimize on `w+` space may work slower than `w`, but usually achieve
-            #         better results.
-            #         * Note that changing the latent space will reset the image, points and
-            #         mask (this has the same effect as `Reset Image` button).
-            #         3. Click `Edit Flexible Area` to create a mask and constrain the
-            #         unmasked region to remain unchanged.
-            #         """)
+            1. Change `Step Size` to adjust learning rate in drag optimization.
+            2. Select `w` or `w+` to change latent space to optimize:
+            * Optimize on `w` space may cause greater influence to the image.
+            * Optimize on `w+` space may work slower than `w`, but usually achieve
+            better results.
+            * Note that changing the latent space will reset the image, points and
+            mask (this has the same effect as `Reset Image` button).
+            3. Click `Edit Flexible Area` to create a mask and constrain the
+            unmasked region to remain unchanged.
+            """)
 
     # Network & latents tab listeners
     def on_change_pretrained_dropdown(pretrained_value, global_state):
