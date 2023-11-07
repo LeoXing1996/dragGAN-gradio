@@ -285,33 +285,25 @@ with gr.Blocks() as app:
     #         """)
     quick_start_en = """
             ## Quick Start
-
-            1. Select desired `Pretrained Model` and adjust `Seed` to generate an
-            initial image.
+            1. Select desired `Pretrained Model` and adjust `Seed` to generate an initial image.
             2. Click on image to add control points.
             3. Click `Start` and enjoy it!
 
             ## Advance Usage
-
             1. Change `Step Size` to adjust learning rate in drag optimization.
             2. Select `w` or `w+` to change latent space to optimize:
             * Optimize on `w` space may cause greater influence to the image.
-            * Optimize on `w+` space may work slower than `w`, but usually achieve
-            better results.
-            * Note that changing the latent space will reset the image, points and
-            mask (this has the same effect as `Reset Image` button).
-            3. Click `Edit Flexible Area` to create a mask and constrain the
-            unmasked region to remain unchanged.
+            * Optimize on `w+` space may work slower than `w`, but usually achieve better results.
+            * Note that changing the latent space will reset the image, points and mask (this has the same effect as `Reset Image` button).
+            3. Click `Edit Flexible Area` to create a mask and constrain the unmasked region to remain unchanged.
             """
     quick_start_cn = """
             ## 快速开始
-
             1. 选择所需的 `预训练模型` 并调整 `种子` 以生成初始图像。
             2. 单击图像添加控制点。
             3. 单击 `开始` ，即刻享受！
 
             ## 高级用法
-
             1. 更改 `步长值` 以调整拖动优化中的学习率。
             2. 选择 `w` 或 `w+` 更改潜在空间以进行优化：
             * 对 `w` 空间进行优化可能会对图像造成较大影响。
