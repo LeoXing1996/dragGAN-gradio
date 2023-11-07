@@ -53,7 +53,7 @@ def get_curr_time():
 
 
 if is_openxlab:
-    cache_dir = '~/.cache/model/mmagic_DragGAN'
+    cache_dir = '/home/xlab-app-center/.cache/model/mmagic_DragGAN'
     os.makedirs(cache_dir, exist_ok=True)
     download(model_repo='mmagic/DragGAN',
              model_name='DragGAN-Human')
