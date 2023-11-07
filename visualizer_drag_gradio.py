@@ -462,7 +462,7 @@ with gr.Blocks() as app:
                 form_reset_image, enable_add_points, undo_points, form_start_btn, form_stop_btn, enable_add_mask, form_reset_mask_btn]
 
 
-    lang_btn.click(change_language, inputs=lang_btn, outputs=[lang, quick_start_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
+    lang_btn.click(change_language, inputs=lang_btn, outputs=[lang_btn, quick_start_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
                 form_reset_image, enable_add_points, undo_points, form_start_btn, form_stop_btn, enable_add_mask, form_reset_mask_btn])
 
     # Network & latents tab listeners
