@@ -53,6 +53,7 @@ def get_curr_time():
 
 
 if is_openxlab:
+    # cache_dir = '/home/xlab-app-center/.cache/model/mmagic_DragGAN' openxlab cache dir
     cache_dir = '/home/xlab-app-center/.cache/model'
     # os.makedirs(cache_dir, exist_ok=True)
     # download(model_repo='mmagic/DragGAN',
@@ -264,11 +265,16 @@ with gr.Blocks() as app:
 
     # Header~
     with gr.Row():
-        gr.HTML("""
-            <h1 align="center">The Official Implementation of </h1>
-            <h1 align="center"><a href="https://github.com/XingangPan/DragGAN">"Drag Your GAN: Interactive Point-based Manipulation on the Generative Image Manifold"</a></h1>
-            <br>
-            """)
+        with gr.Row():
+            with gr.Column(scale=20):
+                gr.HTML("""
+                    <h1 align="center">The Official Implementation of </h1>
+                    <h1 align="center"><a href="https://github.com/XingangPan/DragGAN">"Drag Your GAN: Interactive Point-based Manipulation on the Generative Image Manifold"</a></h1>
+                    <br>
+                    """)
+            with gr.Column(scale=1, min_width=100):
+                lang_btn = gr.Button(value="中文")
+
         # gr.HTML("""
         #     <h1 align="center"><a href="https://github.com/XingangPan/DragGAN">"Drag Your GAN: Interactive Point-based Manipulation on the Generative Image Manifold"</a></h1>
         #     <br>
@@ -278,6 +284,38 @@ with gr.Blocks() as app:
     #     gr.Markdown("""
     #         * Official GitHub Repo: [DragGAN](https://github.com/XingangPan/DragGAN)
     #         """)
+    quick_start_en = """
+            ## Quick Start
+            1. Select desired `Pretrained Model` and adjust `Seed` to generate an initial image.
+            2. Click on image to add control points.
+            3. Click `Start` and enjoy it!
+            """
+    quick_start_cn = """
+            ## 快速开始
+            1. 选择所需的 `预训练模型` 并调整 `种子` 以生成初始图像。
+            2. 单击图像添加控制点。
+            3. 单击 `开始` ，即刻享受！
+            """
+    advanced_usage_en = """
+            ## Advance Usage
+            1. Change `Step Size` to adjust learning rate in drag optimization.
+            2. Select `w` or `w+` to change latent space to optimize:
+            * Optimize on `w` space may cause greater influence to the image.
+            * Optimize on `w+` space may work slower than `w`, but usually achieve better results.
+            * Note that changing the latent space will reset the image, points and mask (this has the same effect as `Reset Image` button).
+            3. Click `Edit Flexible Area` to create a mask and constrain the unmasked region to remain unchanged.
+            """
+    advanced_usage_cn = """
+            ## 高级用法
+            1. 更改 `步长值` 以调整拖动优化中的学习率。
+            2. 选择 `w` 或 `w+` 更改潜在空间以进行优化：
+            * 对 `w` 空间进行优化可能会对图像造成较大影响。
+            * 在 `w+` 空间上优化可能比 `w` 慢，但通常可以实现更好的结果。
+            * 请注意，更改潜在空间将重置图像、点和mask（这与 `重置图像` 按钮具有相同的效果）。
+            3. 单击 `编辑灵活区域` 创建mask并约束未mask区域保持不变。
+            """
+
+
 
     with gr.Row():
 
@@ -385,28 +423,51 @@ with gr.Blocks() as app:
                         width=768,
                         height=768)  # NOTE: hard image size code here.
 
-    # Bottom --> Instruction
+    # Instruction
     with gr.Row():
-        gr.Markdown("""
-            ## Quick Start
+        with gr.Column(scale=7):
+            quick_start_markdown = gr.Markdown(quick_start_en)
+        with gr.Column(scale=13):
+            advanced_usage_markdown = gr.Markdown(advanced_usage_en)
 
-            1. Select desired `Pretrained Model` and adjust `Seed` to generate an
-            initial image.
-            2. Click on image to add control points.
-            3. Click `Start` and enjoy it!
 
-            ## Advance Usage
+    def change_language(lang):
+        if lang == '中文':
+            lang = gr.Button(value='English')
+            quick_start_markdown = gr.Markdown(value=quick_start_cn)
+            advanced_usage_markdown = gr.Markdown(value=advanced_usage_cn)
+            form_pretrained_dropdown = gr.Dropdown(label="预训练模型")
+            form_seed_number = gr.Number(label="种子")
+            form_lr_number = gr.Number(label="步长值")
+            form_reset_image = gr.Button(value="重置图像")
+            enable_add_points = gr.Button(value="添加点位")
+            undo_points = gr.Button(value='重置点位')
+            form_start_btn = gr.Button(value="开始")
+            form_stop_btn = gr.Button(value="停止")
+            enable_add_mask = gr.Button(value='编辑灵活区域')
+            form_reset_mask_btn = gr.Button(value="重置mask")
 
-            1. Change `Step Size` to adjust learning rate in drag optimization.
-            2. Select `w` or `w+` to change latent space to optimize:
-            * Optimize on `w` space may cause greater influence to the image.
-            * Optimize on `w+` space may work slower than `w`, but usually achieve
-            better results.
-            * Note that changing the latent space will reset the image, points and
-            mask (this has the same effect as `Reset Image` button).
-            3. Click `Edit Flexible Area` to create a mask and constrain the
-            unmasked region to remain unchanged.
-            """)
+        elif lang == 'English':
+            lang = gr.Button(value='中文')
+            quick_start_markdown = gr.Markdown(value=quick_start_en)
+            advanced_usage_markdown = gr.Markdown(value=advanced_usage_en)
+            form_pretrained_dropdown = gr.Dropdown(label="Pretrained Model")
+            form_seed_number = gr.Number(label="Seed")
+            form_lr_number = gr.Number(label="Step Size")
+            form_reset_image = gr.Button(value="Reset Image")
+            enable_add_points = gr.Button(value="Add Points")
+            undo_points = gr.Button(value='Reset Points')
+            form_start_btn = gr.Button(value="Start")
+            form_stop_btn = gr.Button(value="Stop")
+            enable_add_mask = gr.Button(value='Edit Flexible Area')
+            form_reset_mask_btn = gr.Button(value="Reset mask")
+
+        return [lang, quick_start_markdown, advanced_usage_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
+                form_reset_image, enable_add_points, undo_points, form_start_btn, form_stop_btn, enable_add_mask, form_reset_mask_btn]
+
+
+    lang_btn.click(change_language, inputs=lang_btn, outputs=[lang_btn, quick_start_markdown, advanced_usage_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
+                form_reset_image, enable_add_points, undo_points, form_start_btn, form_stop_btn, enable_add_mask, form_reset_mask_btn])
 
     # Network & latents tab listeners
     def on_change_pretrained_dropdown(pretrained_value, global_state):
