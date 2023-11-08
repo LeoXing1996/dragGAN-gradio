@@ -315,12 +315,6 @@ with gr.Blocks() as app:
             """
 
 
-    # Instruction
-    with gr.Row():
-        with gr.Column(scale=10):
-            quick_start_markdown = gr.Markdown(quick_start_en)
-        with gr.Column(scale=10):
-            advanced_usage_markdown = gr.Markdown(advanced_usage_en)
 
     with gr.Row():
 
@@ -428,6 +422,14 @@ with gr.Blocks() as app:
                         width=768,
                         height=768)  # NOTE: hard image size code here.
 
+    # Instruction
+    with gr.Row():
+        with gr.Column(scale=7):
+            quick_start_markdown = gr.Markdown(quick_start_en)
+        with gr.Column(scale=13):
+            advanced_usage_markdown = gr.Markdown(advanced_usage_en)
+
+
     def change_language(lang):
         if lang == '中文':
             lang = gr.Button(value='English')
@@ -459,11 +461,11 @@ with gr.Blocks() as app:
             enable_add_mask = gr.Button(value='Edit Flexible Area')
             form_reset_mask_btn = gr.Button(value="Reset mask")
 
-        return [lang, quick_start_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
+        return [lang, quick_start_markdown, advanced_usage_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
                 form_reset_image, enable_add_points, undo_points, form_start_btn, form_stop_btn, enable_add_mask, form_reset_mask_btn]
 
 
-    lang_btn.click(change_language, inputs=lang_btn, outputs=[lang_btn, quick_start_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
+    lang_btn.click(change_language, inputs=lang_btn, outputs=[lang_btn, quick_start_markdown, advanced_usage_markdown, form_pretrained_dropdown, form_seed_number, form_lr_number,
                 form_reset_image, enable_add_points, undo_points, form_start_btn, form_stop_btn, enable_add_mask, form_reset_mask_btn])
 
     # Network & latents tab listeners
