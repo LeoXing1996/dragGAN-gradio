@@ -55,25 +55,25 @@ def get_curr_time():
 if is_openxlab:
     # cache_dir = '/home/xlab-app-center/.cache/model/mmagic_DragGAN' openxlab cache dir
     cache_dir = '/home/xlab-app-center/.cache/model'
-    # os.makedirs(cache_dir, exist_ok=True)
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Human')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Dogs')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Elephants')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Horse')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Lions')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Cats')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Car-f')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-Cat-f')
-    # download(model_repo='mmagic/DragGAN',
-    #          model_name='DragGAN-FFHQ')
+    os.makedirs(cache_dir, exist_ok=True)
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Human')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Dogs')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Elephants')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Horse')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Lions')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Cats')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Car-f')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-Cat-f')
+    download(model_repo='mmagic/DragGAN',
+             model_name='DragGAN-FFHQ')
 else:
     cache_dir = args.cache_dir
 
